@@ -116,7 +116,7 @@ if check_password():
             # UPDATED LABELS AS REQUESTED
             view_opt = st.radio("Time View", ["Full History", "Last Year", "Last Month", "Last Week"], horizontal=True)
         with t2:
-            cardio_options = ["-"] + sorted([x for x in df["Cardio Type"].unique() if x not in ["N/A", "0", "0.0", "None"]])
+            cardio_options = ["All"] + sorted([x for x in df["Cardio Type"].unique() if x not in ["N/A", "0", "0.0", "None"]])
             selected_type = st.selectbox("Drill into Cardio Type", cardio_options)
         with t3:
             abs_min_date = df["Date_Only"].min()
