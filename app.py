@@ -134,7 +134,7 @@ if check_password():
             chart_df = chart_df[chart_df["Date_Only"] >= (today - timedelta(days=365))]
 
         activity_df = chart_df.copy()
-        if selected_type != "-":
+        if selected_type != "All":
             activity_df = activity_df[activity_df["Cardio Type"] == selected_type]
 
 # ... (existing code above)
