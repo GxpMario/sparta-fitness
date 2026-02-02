@@ -1,0 +1,21 @@
+# Streamlit secrets (contains your Google credentials)
+.streamlit/
+
+# The original Google JSON key file (if you have it in this folder)
+*.json
+
+# Python environment/cache files
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+.env
+
+# MacOS system files
+.DS_Store
+
+# All other files
+*.xlsx
+*.csv
+*.bak
