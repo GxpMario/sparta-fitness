@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import date
+from datetime import date, timedelta
 import altair as alt
 
 # 1. Page Configuration
