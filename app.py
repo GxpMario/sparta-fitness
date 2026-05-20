@@ -398,7 +398,7 @@ if check_password():
             st.metric("Waist (latest)", f"{val} cm")
             st.caption(f"as of {dt}")
         with o4:
-            st.metric("Stretching Sessions", len(df[df["Stretched"] == True]))
+            st.metric("Stretch Sessions", len(df[df["Stretched"] == True]))
 
         o5, o6, o7, o8 = st.columns(4)
         with o5:
@@ -439,9 +439,9 @@ if check_password():
             unsafe_allow_html=True,
         )
         p1, p2, p3, p4, p5 = st.columns(5)
-        p1.metric("Kickboxing", len(chart_df[chart_df["Cardio Type"] == "Kickboxing"]))
+        p1.metric("Kickboxing Sessions", len(chart_df[chart_df["Cardio Type"] == "Kickboxing"]))
         p2.metric("Weight Sessions", len(chart_df[chart_df["Weights"] == True]))
-        p3.metric("Stretches", len(chart_df[chart_df["Stretched"] == True]))
+        p3.metric("Stretch Sessions", len(chart_df[chart_df["Stretched"] == True]))
         p4.metric("Pull-up Reps", int(chart_df["Pullups"].sum()) if "Pullups" in chart_df.columns else 0)
         p5.metric("Skip (min)", int(chart_df[chart_df["Cardio Type"] == "Skip"]["Cardio Min/Reps"].sum()))
 
