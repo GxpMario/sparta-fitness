@@ -1,0 +1,7 @@
+DONE: Fix the Cardio sesssion. Currently showing all days, not the actual sessions.
+
+DONE: Fix the x axis label on the charts.
+
+DONE: Add under Body Progress the latest weight, body fat and waist size and the date for each.
+
+DONE: Add just under the Insights & Filtering the date of the latest entry.
