@@ -14,7 +14,7 @@ BLOOMBERG_CSS = """
 /* Consolas on all text — exclude SVG/icon elements */
 body,
 p, h1, h2, h3, h4, h5, h6, li, a, td, th,
-input, textarea, select, label,
+input, textarea, select, label, option,
 .stMarkdown, .stText,
 [data-testid="stMetricValue"],
 [data-testid="stMetricLabel"],
@@ -22,7 +22,7 @@ input, textarea, select, label,
 [data-testid="stWidgetLabel"],
 [data-baseweb="tab"] div,
 .streamlit-expanderHeader p,
-button, .stButton > button, .stFormSubmitButton > button {
+button, .stButton > button, .stFormSubmitButton > button, .stRadio > label > div {
     font-family: Consolas, 'Courier New', monospace !important;
 }
 .material-icons, i.material-icons {
@@ -38,7 +38,7 @@ button, .stButton > button, .stFormSubmitButton > button {
 /* ── Metric tiles ── */
 [data-testid="stMetric"] {
     background-color: #0E1220 !important;
-    border: 1px solid #1C2535 !important;
+    border: 1px solid #3C4555 !important;
     border-top: 2px solid #FF9900 !important;
     padding: 14px 18px !important;
 }
@@ -59,11 +59,11 @@ button, .stButton > button, .stFormSubmitButton > button {
 /* ── Inputs ── */
 .stTextInput input,
 .stNumberInput input,
-.stTextArea textarea,
-.stDateInput input {
+.stTextArea textarea, .stDateInput input,
+.stSelectbox [data-baseweb="select"] > div input {
     background-color: #0C0F18 !important;
-    color: #CCCCCC !important;
-    border: 1px solid #1C2535 !important;
+    color: #E0E0E0 !important;
+    border: 1px solid #3C4555 !important;
     border-radius: 0 !important;
     font-weight: 600 !important;
     font-size: 0.9rem !important;
@@ -80,9 +80,9 @@ button, .stButton > button, .stFormSubmitButton > button {
 /* Select box */
 .stSelectbox [data-baseweb="select"] > div {
     background-color: #0C0F18 !important;
-    border: 1px solid #1C2535 !important;
+    border: 1px solid #3C4555 !important;
     border-radius: 0 !important;
-    color: #CCCCCC !important;
+    color: #E0E0E0 !important;
     font-weight: 600 !important;
 }
 
@@ -104,9 +104,9 @@ label,
 /* ── Number steppers ── */
 .stNumberInput [data-testid="stNumberInputStepUp"],
 .stNumberInput [data-testid="stNumberInputStepDown"] {
-    background-color: #0C0F18 !important;
-    border-color: #1C2535 !important;
-    color: #444 !important;
+    background-color: #1C2028 !important;
+    border-color: #3C4555 !important;
+    color: #666 !important;
     border-radius: 0 !important;
 }
 
@@ -152,7 +152,7 @@ label,
 .streamlit-expanderHeader {
     background-color: #0E1220 !important;
     color: #00CCFF !important;
-    border: 1px solid #1C2535 !important;
+    border: 1px solid #3C4555 !important;
     border-radius: 0 !important;
     font-weight: 700 !important;
     font-size: 0.8rem !important;
@@ -162,7 +162,7 @@ label,
 }
 .streamlit-expanderContent {
     background-color: #0C0F18 !important;
-    border: 1px solid #1C2535 !important;
+    border: 1px solid #3C4555 !important;
     border-top: none !important;
     padding: 1rem 1.1rem 0.9rem 1.1rem !important;
 }
@@ -170,13 +170,13 @@ label,
 /* ── Tabs ── */
 [data-baseweb="tab-list"] {
     background-color: #0A0D14 !important;
-    border-bottom: 1px solid #1C2535 !important;
+    border-bottom: 1px solid #3C4555 !important;
     gap: 2px !important;
 }
 [data-baseweb="tab"] {
     background-color: #0A0D14 !important;
     border-radius: 0 !important;
-    border: 1px solid #1C2535 !important;
+    border: 1px solid #3C4555 !important;
     border-bottom: none !important;
     font-size: 0.75rem !important;
     font-weight: 700 !important;
@@ -184,14 +184,14 @@ label,
     text-transform: uppercase;
     padding: 0.5rem 1.4rem !important;
 }
-[data-baseweb="tab"] div { color: #3A4A60 !important; }
+[data-baseweb="tab"] div { color: #5A6A80 !important; }
 [data-baseweb="tab"][aria-selected="true"] {
     background-color: #0E1220 !important;
     border-color: #FF9900 !important;
     border-bottom: 2px solid #FF9900 !important;
 }
 [data-baseweb="tab"][aria-selected="true"] div { color: #FF9900 !important; }
-
+ 
 /* ── Radio ── */
 .stRadio [data-baseweb="radio"] span:first-child { border-color: #2A3A50 !important; }
 .stRadio [data-baseweb="radio"] [aria-checked="true"] span:first-child {
@@ -207,14 +207,14 @@ label,
 .stError   > div { background-color: #130000 !important; border-left: 3px solid #CC2200 !important; }
 
 /* ── HR / captions / dataframe ── */
-hr { border: none !important; border-top: 1px solid #1C2535 !important; margin: 0.8rem 0 !important; }
-[data-testid="stCaptionContainer"] { color: #3A4A60 !important; font-size: 0.7rem !important; }
-[data-testid="stDataFrame"] { border: 1px solid #1C2535 !important; }
+hr { border: none !important; border-top: 1px solid #3C4555 !important; margin: 0.8rem 0 !important; }
+[data-testid="stCaptionContainer"] { color: #5A6A80 !important; font-size: 0.7rem !important; }
+[data-testid="stDataFrame"] { border: 1px solid #3C4555 !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: #0A0D14; }
-::-webkit-scrollbar-thumb { background: #1C2535; border-radius: 0; }
+::-webkit-scrollbar-thumb { background: #3C4555; border-radius: 0; }
 ::-webkit-scrollbar-thumb:hover { background: #FF9900; }
 
 [data-testid="column"] { padding: 0 0.3rem !important; }
@@ -257,7 +257,7 @@ def form_section_label(text):
             letter-spacing:0.18em;
             margin:1rem 0 0.4rem 0;
             padding-bottom:3px;
-            border-bottom:1px solid #1C2535;
+            border-bottom:1px solid #3C4555;
         '>{text}</div>""",
         unsafe_allow_html=True,
     )
@@ -279,11 +279,11 @@ def check_password():
                             font-size:2.2rem;font-weight:700;letter-spacing:0.08em;'>
                     Gxpr Stats
                 </div>
-                <div style='color:#1C2535;font-size:0.8rem;letter-spacing:0.25em;
+                <div style='color:#3C4555;font-size:0.8rem;letter-spacing:0.25em;
                             margin-top:0.6rem;font-family:Consolas,monospace;'>
                     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 </div>
-                <div style='color:#3A4A60;font-family:Consolas,monospace;
+                <div style='color:#5A6A80;font-family:Consolas,monospace;
                             font-size:0.72rem;letter-spacing:0.2em;margin-top:0.6rem;'>
                     AUTHENTICATION REQUIRED
                 </div>
@@ -321,7 +321,7 @@ if check_password():
                          font-size:1.45rem;font-weight:700;letter-spacing:0.06em;'>
                 Gxpr Stats
             </span>
-            <span style='color:#3A4A60;font-family:Consolas,monospace;
+            <span style='color:#5A6A80;font-family:Consolas,monospace;
                          font-size:0.65rem;font-weight:700;letter-spacing:0.2em;'>
                 PERSONAL ANALYTICS SYSTEM
             </span>
@@ -367,26 +367,11 @@ if check_password():
                 f"<div style='background:#0E1220;border-left:3px solid #FF9900;"
                 f"padding:0.5rem 1rem;font-family:Consolas,monospace;"
                 f"font-size:0.88rem;font-weight:500;margin-bottom:0.5rem;'>"
-                f"<span style='color:#3A4A60;font-size:0.72rem;'>"
+                f"<span style='color:#5A6A80;font-size:0.72rem;'>"
                 f"[{latest['Date_Only'].strftime('%Y-%m-%d')}]</span>"
-                f"&nbsp;&nbsp;<span style='color:#CCCCCC;'>{comment}</span></div>",
+                f"&nbsp;&nbsp;<span style='color:#E0E0E0;'>{comment}</span></div>",
                 unsafe_allow_html=True,
             )
-
-    # ── Lifetime overview ─────────────────────────────────────────────────────
-    if not df.empty:
-        section_header("LIFETIME OVERVIEW")
-        o1, o2, o3, o4, o5 = st.columns(5)
-        with o1:
-            st.metric("Kickboxing Sessions", len(df[df["Cardio Type"] == "Kickboxing"]))
-        with o2:
-            st.metric("Weight Sessions", len(df[df["Weights"] == True]))
-        with o3:
-            st.metric("Stretch Sessions", len(df[df["Stretched"] == True]))
-        with o4:
-            st.metric("Pull-up Sessions", int(df[df["Pullups"] > 0]["Pullups"].count()))
-        with o5:
-            st.metric("Skip Sessions", len(df[df["Cardio Type"] == "Skip"]))
 
     # ── Filtering ─────────────────────────────────────────────────────────────
     section_header("INSIGHTS")
@@ -410,12 +395,6 @@ if check_password():
         elif view_opt == "Last 12 Months":
             chart_df = chart_df[chart_df["Date_Only"] >= (today - timedelta(days=365))]
 
-        st.markdown(
-            f"<div style='color:#00CCFF;font-family:Consolas,monospace;font-size:0.7rem;"
-            f"font-weight:700;letter-spacing:0.18em;margin:0.9rem 0 0.5rem 0;'>"
-            f"PERIOD SUMMARY — {view_opt.upper()}</div>",
-            unsafe_allow_html=True,
-        )
         p1, p2, p3, p4, p5 = st.columns(5)
         p1.metric("Kickboxing Sessions", len(chart_df[chart_df["Cardio Type"] == "Kickboxing"]))
         p2.metric("Weight Sessions", len(chart_df[chart_df["Weights"] == True]))
@@ -444,11 +423,11 @@ if check_password():
 
         def make_chart(data, col, color, y_title, title):
             ax = dict(
-                labelColor="#3A4A60",
+                labelColor="#5A6A80",
                 titleColor="#00CCFF",
                 gridColor="#0E1220",
-                domainColor="#1C2535",
-                tickColor="#1C2535",
+                domainColor="#3C4555",
+                tickColor="#3C4555",
                 labelFontSize=11,
                 titleFontSize=11,
                 labelFont="Consolas",
@@ -595,9 +574,9 @@ if check_password():
                         f"<span style='color:#00CCFF;'>WEIGHT&nbsp;</span>"
                         f"<span style='color:#FF9900;'>{row['Weight']} kg</span>"
                         f"&nbsp;&nbsp;<span style='color:#00CCFF;'>FAT</span>&nbsp;&nbsp;"
-                        f"<span style='color:#FF9900;'>{row['Fat_Pct']}%</span><br>"
-                        f"<span style='color:#00CCFF;'>NOTE&nbsp;&nbsp;&nbsp;</span>"
-                        f"<span style='color:#3A4A60;'>{row['Comments']}</span></div>",
+                        f"<span style='color:#FF9900;'>{row['Fat_Pct']}%</span><br>" # Keep this orange
+                        f"<span style='color:#00CCFF;'>NOTE&nbsp;&nbsp;&nbsp;</span>" # Keep this blue
+                        f"<span style='color:#5A6A80;'>{row['Comments']}</span></div>", # Changed from 3A4A60 to 5A6A80
                         unsafe_allow_html=True,
                     )
                     st.warning("Delete is irreversible.")
