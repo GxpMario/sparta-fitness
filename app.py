@@ -376,38 +376,16 @@ if check_password():
     # ── Lifetime overview ─────────────────────────────────────────────────────
     if not df.empty:
         section_header("LIFETIME OVERVIEW")
-        o1, o2, o3, o4 = st.columns(4)
-
-        def get_latest_metric(col):
-            valid = df[df[col] > 0].sort_values("Date", ascending=False)
-            if not valid.empty:
-                row = valid.iloc[0]
-                return f"{row[col]}", row["Date_Only"].strftime("%b %d, %Y")
-            return "N/A", "—"
-
+        o1, o2, o3, o4, o5 = st.columns(5)
         with o1:
-            val, dt = get_latest_metric("Weight")
-            st.metric("Weight (latest)", f"{val} kg")
-            st.caption(f"as of {dt}")
-        with o2:
-            val, dt = get_latest_metric("Fat_Pct")
-            st.metric("Body Fat (latest)", f"{val}%")
-            st.caption(f"as of {dt}")
-        with o3:
-            val, dt = get_latest_metric("Waist_cm")
-            st.metric("Waist (latest)", f"{val} cm")
-            st.caption(f"as of {dt}")
-        with o4:
-            st.metric("Stretch Sessions", len(df[df["Stretched"] == True]))
-
-        o5, o6, o7, o8 = st.columns(4)
-        with o5:
             st.metric("Kickboxing Sessions", len(df[df["Cardio Type"] == "Kickboxing"]))
-        with o6:
+        with o2:
             st.metric("Weight Sessions", len(df[df["Weights"] == True]))
-        with o7:
+        with o3:
+            st.metric("Stretch Sessions", len(df[df["Stretched"] == True]))
+        with o4:
             st.metric("Pull-up Sessions", int(df[df["Pullups"] > 0]["Pullups"].count()))
-        with o8:
+        with o5:
             st.metric("Skip Sessions", len(df[df["Cardio Type"] == "Skip"]))
 
     # ── Filtering ─────────────────────────────────────────────────────────────
