@@ -323,7 +323,7 @@ if check_password():
             </span>
             <span style='color:#5A6A80;font-family:Consolas,monospace;
                          font-size:0.65rem;font-weight:700;letter-spacing:0.2em;'>
-                PERSONAL ANALYTICS SYSTEM
+                PERSONAL ANALYTICS
             </span>
         </div>
     """, unsafe_allow_html=True)
