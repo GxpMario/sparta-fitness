@@ -380,6 +380,7 @@ if check_password():
         view_opt = st.radio(
             "TIME RANGE",
             ["Full History", "Last 12 Months", "Last 3 Months", "Last Month", "Last Week"],
+            index=2,
             horizontal=True,
         )
         st.caption(f"Latest entry: {df['Date_Only'].max().strftime('%Y-%m-%d')}")
