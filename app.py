@@ -415,13 +415,14 @@ if check_password():
             return "N/A", "—"
 
         v1, d1 = get_period_latest("Weight")
-        v2, d2 = get_period_latest("Fat_Pct")
-        v3, d3 = get_period_latest("Waist_cm")
+        v2, d2 = get_period_latest("Waist_cm")
+        v3, d3 = get_period_latest("Fat_Pct")
         m1.metric("Weight", f"{v1} kg", help=f"As of {d1}")
-        m2.metric("Fat %", f"{v2}%", help=f"As of {d2}")
-        m3.metric("Waist", f"{v3} cm", help=f"As of {d3}")
+        m2.metric("Waist", f"{v2} cm", help=f"As of {d2}")
+        m3.metric("Fat %", f"{v3}%", help=f"As of {d3}")
 
-        def make_chart(data, col, color, y_title, title):
+        def make_chart(data, col, color, y_title, title,
+                       target_low=None, target_high=None, target_unit=""):
             ax = dict(
                 labelColor="#5A6A80",
                 titleColor="#00CCFF",
@@ -433,7 +434,7 @@ if check_password():
                 labelFont="Consolas",
                 titleFont="Consolas",
             )
-            return (
+            line = (
                 alt.Chart(data)
                 .mark_line(
                     point=alt.OverlayMarkDef(color=color, size=40, filled=True),
@@ -449,6 +450,55 @@ if check_password():
                         alt.Tooltip(f"{col}:Q", title=y_title),
                     ],
                 )
+            )
+
+            layers = [line]
+
+            if target_low is not None and target_high is not None:
+                TC = "#2ECC71"  # target green
+
+                # Filled band
+                band = (
+                    alt.Chart(pd.DataFrame({"y1": [float(target_low)], "y2": [float(target_high)]}))
+                    .mark_rect(color=TC, opacity=0.10)
+                    .encode(y=alt.Y("y1:Q"), y2=alt.Y2("y2:Q"))
+                )
+
+                # Dashed boundary lines
+                rule_lo = (
+                    alt.Chart(pd.DataFrame({"y": [float(target_low)]}))
+                    .mark_rule(color=TC, strokeDash=[5, 3], strokeWidth=1, opacity=0.55)
+                    .encode(y=alt.Y("y:Q"))
+                )
+                rule_hi = (
+                    alt.Chart(pd.DataFrame({"y": [float(target_high)]}))
+                    .mark_rule(color=TC, strokeDash=[5, 3], strokeWidth=1, opacity=0.55)
+                    .encode(y=alt.Y("y:Q"))
+                )
+
+                # Label anchored to the max date at the upper boundary
+                label_df = pd.DataFrame({
+                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "y": [float(target_high)],
+                    "text": [f"TARGET  {target_low}–{target_high} {target_unit}"],
+                })
+                label = (
+                    alt.Chart(label_df)
+                    .mark_text(
+                        align="right", baseline="bottom",
+                        color=TC, fontSize=10, fontWeight=700,
+                        font="Consolas", dy=-5,
+                    )
+                    .encode(
+                        x=alt.X("x:T"),
+                        y=alt.Y("y:Q"),
+                        text=alt.Text("text:N"),
+                    )
+                )
+                layers += [band, rule_lo, rule_hi, label]
+
+            return (
+                alt.layer(*layers)
                 .properties(
                     title=alt.TitleParams(
                         text=title, color="#00CCFF", fontSize=11,
@@ -459,25 +509,36 @@ if check_password():
                 .configure_view(strokeOpacity=0)
             )
 
-        tab1, tab2, tab3 = st.tabs(["WEIGHT", "BODY FAT %", "WAIST"])
+        tab1, tab2, tab3 = st.tabs(["WEIGHT", "WAIST", "BODY FAT %"])
         with tab1:
             w_data = chart_df[chart_df["Weight"] > 0]
             if not w_data.empty:
-                st.altair_chart(make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT"), use_container_width=True)
+                st.altair_chart(
+                    make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
+                               target_low=68, target_high=70, target_unit="kg"),
+                    use_container_width=True,
+                )
             else:
                 st.info("No weight data in selected period.")
         with tab2:
-            f_data = chart_df[chart_df["Fat_Pct"] > 0]
-            if not f_data.empty:
-                st.altair_chart(make_chart(f_data, "Fat_Pct", "#00CCFF", "BODY FAT %", "BODY FAT"), use_container_width=True)
-            else:
-                st.info("No body fat data in selected period.")
-        with tab3:
             waist_data = chart_df[chart_df["Waist_cm"] > 0]
             if not waist_data.empty:
-                st.altair_chart(make_chart(waist_data, "Waist_cm", "#FFD700", "WAIST (cm)", "WAIST"), use_container_width=True)
+                st.altair_chart(
+                    make_chart(waist_data, "Waist_cm", "#FFD700", "WAIST (cm)", "WAIST",
+                               target_low=83, target_high=86, target_unit="cm"),
+                    use_container_width=True,
+                )
             else:
                 st.info("No waist data in selected period.")
+        with tab3:
+            f_data = chart_df[chart_df["Fat_Pct"] > 0]
+            if not f_data.empty:
+                st.altair_chart(
+                    make_chart(f_data, "Fat_Pct", "#00CCFF", "BODY FAT %", "BODY FAT"),
+                    use_container_width=True,
+                )
+            else:
+                st.info("No body fat data in selected period.")
 
     # ── Data management ───────────────────────────────────────────────────────
     section_header("DATA MANAGEMENT")
