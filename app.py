@@ -662,9 +662,22 @@ if check_password():
 
         # --- WORKOUT SECTION ---
         form_section_label("RESISTANCE LOG")
-        col_add, _ = st.columns([2, 1])
-        with col_add:
-            new_ex_name = st.text_input("Quick Add Exercise", placeholder="Type name and press enter...", key="add_custom_ex_input")
+        col_sel, col_new = st.columns([1, 1])
+        with col_sel:
+            # Searchable dropdown for exercises already in the database
+            selected_ex = st.selectbox(
+                "Quick Add Existing",
+                options=all_options,
+                index=None,
+                placeholder="Search database...",
+                key="add_existing_ex_select"
+            )
+        with col_new:
+            # Text input to add an entirely new exercise name
+            new_ex_input = st.text_input("...or Add New Name", placeholder="e.g. Incline Bench", key="add_custom_ex_input")
+
+        # Logic to determine which input to process for the log
+        new_ex_name = selected_ex if selected_ex else new_ex_input
 
         # Initialize session log with benchmarks and targets
         if "current_workout_log" not in st.session_state:
