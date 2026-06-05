@@ -423,7 +423,8 @@ if check_password():
         m3.metric("Fat %", f"{v3}%", help=f"As of {d3}")
 
         def make_chart(data, col, color, y_title, title,
-                       target_low=None, target_high=None, target_unit=""):
+                       target_low=None, target_high=None, target_unit="",
+                       inflection_point=None, inflection_label=""):
             ax = dict(
                 labelColor="#5A6A80",
                 titleColor="#00CCFF",
@@ -498,6 +499,33 @@ if check_password():
                 )
                 layers += [band, rule_lo, rule_hi, label]
 
+            if inflection_point is not None:
+                IC = "#FF9900"  # Orange
+
+                # Dotted line
+                rule_inf = (
+                    alt.Chart(pd.DataFrame({"y": [float(inflection_point)]}))
+                    .mark_rule(color=IC, strokeDash=[2, 2], strokeWidth=1.5)
+                    .encode(y=alt.Y("y:Q"))
+                )
+
+                # Label
+                inf_label_df = pd.DataFrame({
+                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "y": [float(inflection_point)],
+                    "text": [inflection_label],
+                })
+                inf_label = (
+                    alt.Chart(inf_label_df)
+                    .mark_text(
+                        align="right", baseline="bottom",
+                        color=IC, fontSize=10, fontWeight=700,
+                        font="Consolas", dy=-5,
+                    )
+                    .encode(x=alt.X("x:T"), y=alt.Y("y:Q"), text=alt.Text("text:N"))
+                )
+                layers += [rule_inf, inf_label]
+
             return (
                 alt.layer(*layers)
                 .properties(
@@ -516,7 +544,8 @@ if check_password():
             if not w_data.empty:
                 st.altair_chart(
                     make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
-                               target_low=68, target_high=70, target_unit="kg"),
+                               target_low=68, target_high=70, target_unit="kg",
+                               inflection_point=72.0, inflection_label="INFLECTION POINT"),
                     use_container_width=True,
                 )
             else:
