@@ -277,7 +277,7 @@ def check_password():
             <div style='text-align:center;padding:6rem 0 3rem 0;'>
                 <div style='color:#FF9900;font-family:Consolas,monospace;
                             font-size:2.2rem;font-weight:700;letter-spacing:0.08em;'>
-                    Gxpr Stats
+                    Gxpr
                 </div>
                 <div style='color:#3C4555;font-size:0.8rem;letter-spacing:0.25em;
                             margin-top:0.6rem;font-family:Consolas,monospace;'>
@@ -319,7 +319,7 @@ if check_password():
                     display:flex;justify-content:space-between;align-items:baseline;'>
             <span style='color:#FF9900;font-family:Consolas,monospace;
                          font-size:1.45rem;font-weight:700;letter-spacing:0.06em;'>
-                Gxpr Stats
+                Gxpr
             </span>
             <span style='color:#5A6A80;font-family:Consolas,monospace;
                          font-size:0.65rem;font-weight:700;letter-spacing:0.2em;'>
