@@ -451,7 +451,8 @@ if check_password():
 
         def make_chart(data, col, color, y_title, title,
                        target_low=None, target_high=None, target_unit="",
-                       inflection_point=None, inflection_label=""):
+                       inflection_point=None, inflection_label="",
+                       upper_limit=None, upper_limit_label=""):
             ax = dict(
                 labelColor="#5A6A80",
                 titleColor="#00CCFF",
@@ -553,6 +554,33 @@ if check_password():
                 )
                 layers += [rule_inf, inf_label]
 
+            if upper_limit is not None:
+                ULC = "#8B0000"  # Dark Red
+
+                # Dotted line
+                rule_ul = (
+                    alt.Chart(pd.DataFrame({"y": [float(upper_limit)]}))
+                    .mark_rule(color=ULC, strokeDash=[2, 2], strokeWidth=1.5)
+                    .encode(y=alt.Y("y:Q"))
+                )
+
+                # Label
+                ul_label_df = pd.DataFrame({
+                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "y": [float(upper_limit)],
+                    "text": [upper_limit_label],
+                })
+                ul_label = (
+                    alt.Chart(ul_label_df)
+                    .mark_text(
+                        align="right", baseline="bottom",
+                        color=ULC, fontSize=10, fontWeight=700,
+                        font="Consolas", dy=-5,
+                    )
+                    .encode(x=alt.X("x:T"), y=alt.Y("y:Q"), text=alt.Text("text:N"))
+                )
+                layers += [rule_ul, ul_label]
+
             return (
                 alt.layer(*layers)
                 .properties(
@@ -572,7 +600,8 @@ if check_password():
                 st.altair_chart(
                     make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
                                target_low=68, target_high=70, target_unit="kg",
-                               inflection_point=72.0, inflection_label="INFLECTION POINT"),
+                               inflection_point=72.0, inflection_label="INFLECTION POINT",
+                               upper_limit=74.0, upper_limit_label="UPPER LIMIT"),
                     use_container_width=True,
                 )
             else:
