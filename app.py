@@ -678,7 +678,7 @@ if check_password():
         form_section_label("ACTIVITY & CARDIO")
         c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1.5, 1.5])
         with c1: f_abs = st.checkbox("Abs")
-        with c2: f_weights = st.checkbox("Weights", value=True)
+        with c2: f_weights = st.checkbox("Weights")
         with c3: f_stretch = st.checkbox("Stretched")
         with c4:
             f_kickboxing = st.checkbox("KB")
