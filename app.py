@@ -658,7 +658,7 @@ if check_password():
             with get_workout_conn() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT weight_or_bands, reps, rpe_or_notes 
+                    SELECT weight_or_bands, reps, rpe_or_notes, date 
                     FROM workouts 
                     WHERE LOWER(exercise_name) = LOWER(?) AND set_number = ? 
                     ORDER BY date DESC, rowid DESC LIMIT 1
@@ -666,10 +666,10 @@ if check_password():
                 row = cursor.fetchone()
                 if row:
                     notes = row[2] if row[2] and str(row[2]).lower() != "none" else "no notes"
-                    return f"Last: {row[0]} x{row[1]} ({notes})"
+                    return f"Last: {row[0]} x{row[1]} ({notes})", row[3]
         except Exception:
             pass
-        return "No history"
+        return "No history", "—"
 
     # Fetch all unique exercises from DB for the dropdown
     with get_workout_conn() as db_conn:
@@ -729,13 +729,15 @@ if check_password():
             for ex in default_exercises:
                 target_rule = PROGRESSION_TARGETS.get(ex, {"target": "N/A", "notes": ""})
                 for s in range(1, 4):
+                    perf, last_date = get_last_session_performance(ex, s)
                     initial_log.append({
                         "Exercise": ex,
                         "Set": s,
                         "Weight/Bands": "7.5 kg" if "Dumbbell" in ex or "Lateral" in ex else "3 Bands",
                         "Reps": 0,
                         "Target Rule": target_rule["target"],
-                        "Benchmark History": get_last_session_performance(ex, s),
+                        "Benchmark History": perf,
+                        "Last Date": last_date,
                         "Notes": ""
                     })
             st.session_state.current_workout_log = initial_log
@@ -744,13 +746,15 @@ if check_password():
             existing_in_session = [r["Exercise"] for r in st.session_state.current_workout_log]
             if new_ex_name not in existing_in_session:
                 for s in range(1, 4):
+                    perf, last_date = get_last_session_performance(new_ex_name, s)
                     st.session_state.current_workout_log.append({
                         "Exercise": new_ex_name, 
                         "Set": s, 
                         "Weight/Bands": "", 
                         "Reps": 0, 
                         "Target Rule": "Custom",
-                        "Benchmark History": get_last_session_performance(new_ex_name, s),
+                        "Benchmark History": perf,
+                        "Last Date": last_date,
                         "Notes": ""
                     })
                 if new_ex_name not in all_options:
@@ -767,6 +771,7 @@ if check_password():
                 "Set": st.column_config.NumberColumn("Set", min_value=1, step=1, required=True, disabled=True),
                 "Target Rule": st.column_config.TextColumn("Target Protocol", disabled=True),
                 "Benchmark History": st.column_config.TextColumn("Last Session", disabled=True),
+                "Last Date": st.column_config.TextColumn("Last Date", disabled=True),
                 "Weight/Bands": st.column_config.TextColumn("Weight/Bands"),
                 "Reps": st.column_config.NumberColumn("Reps", min_value=0, step=1),
                 "Notes": st.column_config.TextColumn("RPE / Notes"),
