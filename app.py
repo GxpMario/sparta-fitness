@@ -731,6 +731,7 @@ if check_password():
                 for s in range(1, 4):
                     perf, last_date = get_last_session_performance(ex, s)
                     initial_log.append({
+                        "Session Date": w_date.strftime("%Y-%m-%d"),
                         "Exercise": ex,
                         "Set": s,
                         "Weight/Bands": "7.5 kg" if "Dumbbell" in ex or "Lateral" in ex else "3 Bands",
@@ -748,6 +749,7 @@ if check_password():
                 for s in range(1, 4):
                     perf, last_date = get_last_session_performance(new_ex_name, s)
                     st.session_state.current_workout_log.append({
+                        "Session Date": w_date.strftime("%Y-%m-%d"),
                         "Exercise": new_ex_name, 
                         "Set": s, 
                         "Weight/Bands": "", 
@@ -762,11 +764,17 @@ if check_password():
                     all_options.sort()
                 st.rerun()
         
+        # Sync Session Date in table if the date picker changes
+        if "current_workout_log" in st.session_state:
+            for row in st.session_state.current_workout_log:
+                row["Session Date"] = w_date.strftime("%Y-%m-%d")
+
         # Interactive entry layout
         edited_log = st.data_editor(
             st.session_state.current_workout_log,
             num_rows="dynamic",
             column_config={
+                "Session Date": st.column_config.TextColumn("Session Date", disabled=True),
                 "Exercise": st.column_config.SelectboxColumn("Exercise", options=all_options, required=True, disabled=True),
                 "Set": st.column_config.NumberColumn("Set", min_value=1, step=1, required=True, disabled=True),
                 "Target Rule": st.column_config.TextColumn("Target Protocol", disabled=True),
