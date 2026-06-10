@@ -660,12 +660,13 @@ if check_password():
                 cursor.execute("""
                     SELECT weight_or_bands, reps, rpe_or_notes 
                     FROM workouts 
-                    WHERE exercise_name = ? AND set_number = ? 
-                    ORDER BY date DESC LIMIT 1
+                    WHERE LOWER(exercise_name) = LOWER(?) AND set_number = ? 
+                    ORDER BY date DESC, rowid DESC LIMIT 1
                 """, (exercise, set_num))
                 row = cursor.fetchone()
                 if row:
-                    return f"Last: {row[0]} x{row[1]} ({row[2]})"
+                    notes = row[2] if row[2] and str(row[2]).lower() != "none" else "no notes"
+                    return f"Last: {row[0]} x{row[1]} ({notes})"
         except Exception:
             pass
         return "No history"
@@ -776,6 +777,7 @@ if check_password():
 
         with st.expander("📝 LOGGING RUBRIC & KEYWORDS", expanded=False):
             st.markdown("""
+            **Tip:** Ensure you press **Enter** or click out of the table after your last entry to ensure it's saved!
             **Core Keywords for System Audit:**
             *   **`easy`**: Triggers **Overload Authorization**. Use when you have significant Reps in Reserve (RIR).
             *   **`medium`**: System recommends maintaining current load and refining form.
@@ -824,8 +826,8 @@ if check_password():
                             (w_date.strftime("%Y-%m-%d"), row["Exercise"], row["Set"], 
                              row["Weight/Bands"], row["Reps"], row["Notes"])
                         )
-                st.success(f"Synced {len(valid_entries)} sets to local DB.")
-            
+                st.toast(f"✅ Saved {len(valid_entries)} resistance sets.", icon="💪")
+
             st.success(f"Daily metrics synced to GSheets for {w_date}")
             if "current_workout_log" in st.session_state:
                 del st.session_state.current_workout_log
