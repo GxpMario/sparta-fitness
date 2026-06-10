@@ -760,6 +760,23 @@ if check_password():
             key="workout_data_editor"
         )
 
+        with st.expander("📝 LOGGING RUBRIC & KEYWORDS", expanded=False):
+            st.markdown("""
+            **Core Keywords for System Audit:**
+            *   **`easy`**: Triggers **Overload Authorization**. Use when you have significant Reps in Reserve (RIR).
+            *   **`medium`**: System recommends maintaining current load and refining form.
+            *   **`hard`**: Signals high intensity. Triggers **Tempo/Technical Focus** (3s eccentric/pauses).
+            
+            **RPE Reference (Tracking Only):**
+            *   **RPE 10**: 0 Reps left. Absolute physical limit.
+            *   **RPE 9**: 1 Rep left. Form stayed clean, but barely.
+            *   **RPE 8**: 2 Reps left. *The Hypertrophy Sweet Spot.*
+            
+            **Progression Triggers:**
+            *   **Pull-Ups**: 12+ reps → Remove 1 assistance band.
+            *   **Rows/Raises**: 15+ reps → Increase weight to 10kg.
+            """)
+
         if st.button("SAVE SESSION & SYNC TO CLOUD", use_container_width=True):
             # 1. Logic for GSheets (Daily Metrics)
             if f_kickboxing:
@@ -914,38 +931,52 @@ if check_password():
                     pu_max = conn.execute("""
                         SELECT reps, rpe_or_notes, date FROM workouts 
                         WHERE exercise_name = 'Assisted Pull-Ups' 
-                        ORDER BY date DESC, reps DESC LIMIT 1
+                        ORDER BY date DESC, reps DESC, set_number DESC LIMIT 1
                     """).fetchone()
                     
                     if pu_max:
+                        pu_notes = str(pu_max[1]).lower()
                         st.markdown(f"• **Assisted Pull-Ups Peak Volume:** {pu_max[0]} reps logged on {pu_max[2]} (Notes: {pu_max[1]})")
-                        if pu_max[0] >= 12:
+                        if "easy" in pu_notes or pu_max[0] >= 12:
                             st.warning("⚠️ **Progression Target Triggered:** You are consistently hitting the upper threshold of the 12-rep protocol. **Action:** Unclip exactly 1 resistance band for your next session to force neural adaptation.")
+                        elif "hard" in pu_notes:
+                            st.markdown("  *Status:* High effort detected. Prioritize full range of motion and chin-over-bar clearance before reducing assistance.")
+                        elif "medium" in pu_notes:
+                            st.markdown("  *Status:* Intensity is optimal. Focus on accumulating volume toward the 12-rep threshold.")
                         else:
                             st.markdown("  *Status:* Maintain current 3-band configuration. Focus on pushing the third set from 10 reps to a clean 12 reps before dropping assistance.")
                             
                     row_max = conn.execute("""
-                        SELECT reps, rpe_or_notes FROM workouts 
+                        SELECT reps, rpe_or_notes, date FROM workouts 
                         WHERE exercise_name = 'Dumbbell Rows' 
-                        ORDER BY date DESC LIMIT 1
+                        ORDER BY date DESC, reps DESC, set_number DESC LIMIT 1
                     """).fetchone()
                     
                     if row_max:
                         notes_lower = str(row_max[1]).lower()
                         if "easy" in notes_lower or row_max[0] >= 15:
-                            st.success("🔥 **Overload Authorization:** Dumbbell rows are printing below your structural limit. **Action:** Increase volume to 15 reps. If 15 reps feel below RPE 8, increase physical dumbbell weight to 10 kg.")
+                            st.success(f"🔥 **Overload Authorization:** Dumbbell rows are printing below your structural limit (Last: {row_max[0]} reps). **Action:** Increase physical dumbbell weight to 10 kg.")
+                        elif "hard" in notes_lower:
+                            st.markdown("• **Dumbbell Rows:** Intensity is high. Focus on a 1-second static pause at the peak compression point to maximize lat engagement.")
                         else:
                             st.markdown("• **Dumbbell Rows:** Retain 7.5 kg load. Focus on a 1-second static pause at the peak compression point to protect the elbow joints.")
                             
                     lat_max = conn.execute("""
-                        SELECT reps, rpe_or_notes FROM workouts 
+                        SELECT reps, rpe_or_notes, date FROM workouts 
                         WHERE exercise_name = 'Lateral Dumbbell Raises' 
-                        ORDER BY date DESC LIMIT 1
+                        ORDER BY date DESC, reps DESC, set_number DESC LIMIT 1
                     """).fetchone()
                     
                     if lat_max:
-                        if "failure" in str(lat_max[1]).lower() or "8" in str(lat_max[1]):
-                            st.markdown("• **Lateral Dumbbell Raises:** Ceilings fully engaged at 7.5 kg. **Do not increase raw weight.** Maintain load and prioritize a strict 3-second lowering phase (eccentric focus) to maximize shoulder capping without risking elbow inflammation.")
+                        lat_notes_lower = str(lat_max[1]).lower()
+                        if "easy" in lat_notes_lower or lat_max[0] >= 15:
+                            st.success(f"🔥 **Overload Authorization:** Lateral Raises are currently under-taxing your capacity (Last: {lat_max[0]} reps). **Action:** Transition to 10 kg or push for 15 reps if structural integrity remains high.")
+                        elif "hard" in lat_notes_lower:
+                            st.markdown(f"• **Lateral Dumbbell Raises:** Ceilings fully engaged at 7.5 kg (Last: {lat_max[2]}). **Do not increase raw weight.** Maintain load and prioritize a strict 3-second lowering phase (eccentric focus) to maximize shoulder capping without risking elbow inflammation.")
+                        elif "medium" in lat_notes_lower:
+                            st.markdown(f"• **Lateral Dumbbell Raises:** Loading is appropriate. Focus on minimizing trap involvement and maintaining strict vertical paths.")
+                        else:
+                            st.markdown(f"• **Lateral Dumbbell Raises:** Last logged on {lat_max[2]}. Maintain current load and focus on a strict 3-second eccentric phase to increase intensity.")
         else:
             st.info("No history found in sparta_fitness.db")
 
