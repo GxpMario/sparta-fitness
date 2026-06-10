@@ -352,6 +352,8 @@ if check_password():
             if col in df_raw.columns:
                 df_raw[col] = df_raw[col].fillna("N/A").astype(str)
         df_raw.columns = df_raw.columns.str.strip()
+        if "Stretched" in df_raw.columns:
+            df_raw = df_raw.rename(columns={"Stretched": "Stretch"})
         df_raw = df_raw.dropna(how="all")
     except Exception as e:
         st.error(f"DATA LOAD ERROR: {e}")
@@ -371,9 +373,10 @@ if check_password():
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-        for col in ["Abs", "Weights", "Stretched"]:
-            if col in df.columns:
-                df[col] = df[col].astype(str).str.lower().isin(["true", "1", "1.0", "yes", "y", "checked"])
+        for col in ["Abs", "Weights", "Stretch"]:
+            if col not in df.columns:
+                df[col] = False
+            df[col] = df[col].astype(str).str.lower().isin(["true", "1", "1.0", "yes", "y", "checked"])
 
         # Latest comment banner
         latest = df.sort_values("Date", ascending=False).iloc[0]
@@ -422,13 +425,24 @@ if check_password():
             ).fetchone()
             sqlite_pullups = res[0] if res and res[0] else 0
 
-        p1, p2, p3, p4, p5 = st.columns(5)
-        p1.metric("Kickboxing Sessions", len(chart_df[chart_df["Cardio Type"] == "Kickboxing"]))
-        p2.metric("Weight Sessions", len(chart_df[chart_df["Weights"] == True]))
-        p3.metric("Stretch Sessions", len(chart_df[chart_df["Stretched"] == True]))
+        # Unit classification headers matching radio label style
+        u1, u2, u3, u4, u5, u6 = st.columns(6)
+        unit_lbl = "<div style='color:#00CCFF; font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;'>{}</div>"
+        u1.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+        u2.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+        u3.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+        u4.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+        u5.markdown(unit_lbl.format("REPS"), unsafe_allow_html=True)
+        u6.markdown(unit_lbl.format("MINUTES"), unsafe_allow_html=True)
+
+        p1, p2, p3, p4, p5, p6 = st.columns(6)
+        p1.metric("KICKBOX", len(chart_df[chart_df["Cardio Type"] == "Kickboxing"]))
+        p2.metric("WEIGHTS", len(chart_df[chart_df["Weights"] == True]))
+        p3.metric("ABS", len(chart_df[chart_df["Abs"] == True]))
+        p4.metric("STRETCH", len(chart_df[chart_df["Stretch"] == True]))
         gs_pullups = int(chart_df["Pullups"].sum()) if "Pullups" in chart_df.columns else 0
-        p4.metric("Pull-up Reps", gs_pullups + int(sqlite_pullups))
-        p5.metric("Skip (min)", int(chart_df[chart_df["Cardio Type"] == "Skip"]["Cardio Min/Reps"].sum()))
+        p5.metric("PULL-UPS", gs_pullups + int(sqlite_pullups))
+        p6.metric("SKIP", int(chart_df[chart_df["Cardio Type"] == "Skip"]["Cardio Min/Reps"].sum()))
 
     # ── Body progress trends ──────────────────────────────────────────────────
     if not chart_df.empty:
@@ -676,14 +690,15 @@ if check_password():
             f_waist = st.number_input("Waist (cm)", min_value=0.0, step=0.5, format="%.1f")
 
         form_section_label("ACTIVITY & CARDIO")
-        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1.5, 1.5])
-        with c1: f_abs = st.checkbox("Abs")
+        c1, c2, c3, c4, c5, c6 = st.columns([1.5, 1, 1, 1, 1, 1.5])
+        with c1:
+            f_kickboxing = st.checkbox("KICKBOXING")
+            f_kb_min = st.number_input("KICKBOXING Min", min_value=0, step=5, label_visibility="collapsed")
         with c2: f_weights = st.checkbox("Weights")
-        with c3: f_stretch = st.checkbox("Stretched")
-        with c4:
-            f_kickboxing = st.checkbox("KB")
-            f_kb_min = st.number_input("KB Min", min_value=0, step=5, label_visibility="collapsed")
-        with c5:
+        with c3: f_abs = st.checkbox("Abs")
+        with c4: f_stretch = st.checkbox("Stretch")
+        with c5: f_pullups = st.checkbox("Pullups")
+        with c6:
             f_skipping = st.checkbox("Skip")
             f_skip_min = st.number_input("Skip Min", min_value=0, step=5, label_visibility="collapsed")
 
@@ -789,10 +804,10 @@ if check_password():
             clean_df = df_raw.drop(columns=["__temp_id__", "Display_ID"], errors="ignore")
             new_gs_row = pd.DataFrame([{
                 "Date": w_date.strftime("%Y-%m-%d"),
-                "Pullups": 0, "Pushups": 0, "Squats": 0, "Burpees": 0,
+                "Pullups": 1 if f_pullups else 0, "Pushups": 0, "Squats": 0, "Burpees": 0,
                 "Abs": f_abs, "Weights": f_weights,
                 "Cardio Type": cardio_type, "Cardio Min/Reps": cardio_min,
-                "Stretched": f_stretch,
+                "Stretch": f_stretch,
                 "Weight": f_wgt if f_wgt > 0 else None,
                 "Fat_Pct": f_fat if f_fat > 0 else None,
                 "Waist_cm": f_waist if f_waist > 0 else None,
@@ -1035,7 +1050,7 @@ if check_password():
         if not chart_df.empty:
             display_cols = [c for c in [
                 "Date_Only", "Pullups", "Abs", "Weights",
-                "Cardio Type", "Cardio Min/Reps", "Stretched",
+                "Cardio Type", "Cardio Min/Reps", "Stretch",
                 "Weight", "Fat_Pct", "Waist_cm", "Comments",
             ] if c in chart_df.columns]
             st.dataframe(
