@@ -425,24 +425,29 @@ if check_password():
             ).fetchone()
             sqlite_pullups = res[0] if res and res[0] else 0
 
-        # Unit classification headers matching radio label style
-        u1, u2, u3, u4, u5, u6 = st.columns(6)
-        unit_lbl = "<div style='color:#00CCFF; font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;'>{}</div>"
-        u1.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
-        u2.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
-        u3.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
-        u4.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
-        u5.markdown(unit_lbl.format("REPS"), unsafe_allow_html=True)
-        u6.markdown(unit_lbl.format("MINUTES"), unsafe_allow_html=True)
-
+        # Consolidated columns for responsive layout (keeps labels attached to metrics on mobile)
         p1, p2, p3, p4, p5, p6 = st.columns(6)
-        p1.metric("KICKBOX", len(chart_df[chart_df["Cardio Type"] == "Kickboxing"]))
-        p2.metric("WEIGHTS", len(chart_df[chart_df["Weights"] == True]))
-        p3.metric("ABS", len(chart_df[chart_df["Abs"] == True]))
-        p4.metric("STRETCH", len(chart_df[chart_df["Stretch"] == True]))
-        gs_pullups = int(chart_df["Pullups"].sum()) if "Pullups" in chart_df.columns else 0
-        p5.metric("PULL-UPS", gs_pullups + int(sqlite_pullups))
-        p6.metric("SKIP", int(chart_df[chart_df["Cardio Type"] == "Skip"]["Cardio Min/Reps"].sum()))
+        unit_lbl = "<div style='color:#00CCFF; font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:4px;'>{}</div>"
+        
+        with p1:
+            st.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+            st.metric("KICKBOX", len(chart_df[chart_df["Cardio Type"] == "Kickboxing"]))
+        with p2:
+            st.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+            st.metric("WEIGHTS", len(chart_df[chart_df["Weights"] == True]))
+        with p3:
+            st.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+            st.metric("ABS", len(chart_df[chart_df["Abs"] == True]))
+        with p4:
+            st.markdown(unit_lbl.format("SESSIONS"), unsafe_allow_html=True)
+            st.metric("STRETCH", len(chart_df[chart_df["Stretch"] == True]))
+        with p5:
+            st.markdown(unit_lbl.format("REPS"), unsafe_allow_html=True)
+            gs_pullups = int(chart_df["Pullups"].sum()) if "Pullups" in chart_df.columns else 0
+            st.metric("PULL-UPS", gs_pullups + int(sqlite_pullups))
+        with p6:
+            st.markdown(unit_lbl.format("MINUTES"), unsafe_allow_html=True)
+            st.metric("SKIP", int(chart_df[chart_df["Cardio Type"] == "Skip"]["Cardio Min/Reps"].sum()))
 
     # ── Body progress trends ──────────────────────────────────────────────────
     if not chart_df.empty:
