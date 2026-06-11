@@ -653,16 +653,22 @@ if check_password():
     default_exercises = list(PROGRESSION_TARGETS.keys())
 
     # Helper function to extract last session's performance from SQLite
-    def get_last_session_performance(exercise, set_num):
+    def get_last_session_performance(exercise, set_num, before_date=None):
         try:
             with get_workout_conn() as conn:
                 cursor = conn.cursor()
-                cursor.execute("""
+                query = """
                     SELECT weight_or_bands, reps, rpe_or_notes, date 
                     FROM workouts 
-                    WHERE LOWER(exercise_name) = LOWER(?) AND set_number = ? 
-                    ORDER BY date DESC, rowid DESC LIMIT 1
-                """, (exercise, set_num))
+                    WHERE LOWER(exercise_name) = LOWER(?) AND set_number = ?
+                """
+                params = [exercise, set_num]
+                if before_date:
+                    query += " AND date < ?"
+                    params.append(before_date)
+                query += " ORDER BY date DESC, rowid DESC LIMIT 1"
+                
+                cursor.execute(query, params)
                 row = cursor.fetchone()
                 if row:
                     notes = row[2] if row[2] and str(row[2]).lower() != "none" else "no notes"
@@ -729,7 +735,7 @@ if check_password():
             for ex in default_exercises:
                 target_rule = PROGRESSION_TARGETS.get(ex, {"target": "N/A", "notes": ""})
                 for s in range(1, 4):
-                    perf, last_date = get_last_session_performance(ex, s)
+                    perf, last_date = get_last_session_performance(ex, s, w_date.strftime("%Y-%m-%d"))
                     initial_log.append({
                         "Session Date": w_date.strftime("%Y-%m-%d"),
                         "Exercise": ex,
@@ -747,7 +753,7 @@ if check_password():
             existing_in_session = [r["Exercise"] for r in st.session_state.current_workout_log]
             if new_ex_name not in existing_in_session:
                 for s in range(1, 4):
-                    perf, last_date = get_last_session_performance(new_ex_name, s)
+                    perf, last_date = get_last_session_performance(new_ex_name, s, w_date.strftime("%Y-%m-%d"))
                     st.session_state.current_workout_log.append({
                         "Session Date": w_date.strftime("%Y-%m-%d"),
                         "Exercise": new_ex_name, 
@@ -764,10 +770,20 @@ if check_password():
                     all_options.sort()
                 st.rerun()
         
-        # Sync Session Date in table if the date picker changes
+        # Sync Session Date and refresh benchmarks if the date picker changes
         if "current_workout_log" in st.session_state:
-            for row in st.session_state.current_workout_log:
-                row["Session Date"] = w_date.strftime("%Y-%m-%d")
+            # Track the date used to populate the log to detect changes
+            if "last_synced_date" not in st.session_state:
+                st.session_state.last_synced_date = w_date
+            
+            if st.session_state.last_synced_date != w_date:
+                st.session_state.last_synced_date = w_date
+                for row in st.session_state.current_workout_log:
+                    row["Session Date"] = w_date.strftime("%Y-%m-%d")
+                    # Refresh benchmarks based on the new date context (everything BEFORE the selected date)
+                    perf, last_d = get_last_session_performance(row["Exercise"], row["Set"], w_date.strftime("%Y-%m-%d"))
+                    row["Benchmark History"] = perf
+                    row["Last Date"] = last_d
 
         # Interactive entry layout
         edited_log = st.data_editor(
