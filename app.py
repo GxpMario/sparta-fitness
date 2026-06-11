@@ -856,6 +856,7 @@ if check_password():
                              row["Weight/Bands"], row["Reps"], row["Notes"])
                         )
                 st.toast(f"✅ Saved {len(valid_entries)} resistance sets.", icon="💪")
+                db_conn.commit() # Commit the changes to the database
 
             st.success(f"Daily metrics synced to GSheets for {w_date}")
             if "current_workout_log" in st.session_state:
