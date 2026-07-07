@@ -465,7 +465,7 @@ if check_password():
         def make_chart(data, col, color, y_title, title,
                        target_low=None, target_high=None, target_unit="",
                        inflection_point=None, inflection_label="",
-                       upper_limit=None, upper_limit_label=""):
+                       upper_limit=None, upper_limit_label="", y_ticks=None):
             ax = dict(
                 labelColor="#5A6A80",
                 titleColor="#00CCFF",
@@ -487,7 +487,7 @@ if check_password():
                     x=alt.X("Date_Only:T", title="DATE",
                              axis=alt.Axis(format="%b %Y", labelAngle=-30, **ax)),
                     y=alt.Y(f"{col}:Q", scale=alt.Scale(zero=False), title=y_title,
-                             axis=alt.Axis(**ax)),
+                             axis=alt.Axis(**ax, values=y_ticks) if y_ticks else alt.Axis(**ax)),
                     tooltip=[
                         alt.Tooltip("Date_Only:T", title="Date", format="%Y-%m-%d"),
                         alt.Tooltip(f"{col}:Q", title=y_title),
@@ -614,7 +614,8 @@ if check_password():
                     make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
                                target_low=67, target_high=69, target_unit="kg",
                                inflection_point=70.0, inflection_label="INFLECTION POINT",
-                               upper_limit=71.0, upper_limit_label="UPPER LIMIT"),
+                               upper_limit=71.0, upper_limit_label="UPPER LIMIT",
+                               y_ticks=list(range(67, 91, 2))),
                     use_container_width=True,
                 )
             else:
