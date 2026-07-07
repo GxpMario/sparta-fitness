@@ -612,9 +612,9 @@ if check_password():
             if not w_data.empty:
                 st.altair_chart(
                     make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
-                               target_low=68, target_high=70, target_unit="kg",
-                               inflection_point=72.0, inflection_label="INFLECTION POINT",
-                               upper_limit=74.0, upper_limit_label="UPPER LIMIT"),
+                               target_low=67, target_high=69, target_unit="kg",
+                               inflection_point=70.0, inflection_label="INFLECTION POINT",
+                               upper_limit=71.0, upper_limit_label="UPPER LIMIT"),
                     use_container_width=True,
                 )
             else:
