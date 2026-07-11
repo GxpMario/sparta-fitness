@@ -466,7 +466,8 @@ if check_password():
                        target_low=None, target_high=None, target_unit="",
                        inflection_point=None, inflection_label="",
                        upper_limit=None, upper_limit_label="", y_ticks=None,
-                       ultimate_low=None, ultimate_high=None, ultimate_unit=""):
+                       ultimate_low=None, ultimate_high=None, ultimate_unit="",
+                       y_domain_min=None):
             ax = dict(
                 labelColor="#5A6A80",
                 titleColor="#00CCFF",
@@ -487,7 +488,9 @@ if check_password():
                 .encode(
                     x=alt.X("Date_Only:T", title="DATE",
                              axis=alt.Axis(format="%b %Y", labelAngle=-30, **ax)),
-                    y=alt.Y(f"{col}:Q", scale=alt.Scale(zero=False), title=y_title,
+                    y=alt.Y(f"{col}:Q",
+                             scale=alt.Scale(zero=False, domainMin=y_domain_min) if y_domain_min is not None else alt.Scale(zero=False),
+                             title=y_title,
                              axis=alt.Axis(**ax, values=y_ticks) if y_ticks else alt.Axis(**ax)),
                     tooltip=[
                         alt.Tooltip("Date_Only:T", title="Date", format="%Y-%m-%d"),
@@ -650,7 +653,7 @@ if check_password():
                                target_low=67, target_high=69, target_unit="kg",
                                inflection_point=70.0, inflection_label="INFLECTION POINT 70 kg",
                                ultimate_low=65, ultimate_high=67, ultimate_unit="kg",
-                               y_ticks=list(range(65, 91, 2))),
+                               y_ticks=list(range(65, 91, 2)), y_domain_min=64),
                     use_container_width=True,
                 )
             else:
