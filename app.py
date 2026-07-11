@@ -487,7 +487,7 @@ if check_password():
                 )
                 .encode(
                     x=alt.X("Date_Only:T", title="DATE",
-                             axis=alt.Axis(format="%b %Y", labelAngle=-30, **ax)),
+                             axis=alt.Axis(format="%b %Y", labelAngle=0, tickCount="month", **ax)),
                     y=alt.Y(f"{col}:Q",
                              scale=alt.Scale(zero=False, domainMin=y_domain_min) if y_domain_min is not None else alt.Scale(zero=False),
                              title=y_title,
