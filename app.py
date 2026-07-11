@@ -636,7 +636,7 @@ if check_password():
                         text=title, color="#00CCFF", fontSize=11,
                         font="Consolas", anchor="start", fontWeight=700,
                     ),
-                    height=320, background="#0A0D14",
+                    height=460, background="#0A0D14",
                 )
                 .configure_view(strokeOpacity=0)
             )
