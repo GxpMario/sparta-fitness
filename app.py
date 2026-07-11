@@ -465,7 +465,8 @@ if check_password():
         def make_chart(data, col, color, y_title, title,
                        target_low=None, target_high=None, target_unit="",
                        inflection_point=None, inflection_label="",
-                       upper_limit=None, upper_limit_label="", y_ticks=None):
+                       upper_limit=None, upper_limit_label="", y_ticks=None,
+                       ultimate_low=None, ultimate_high=None, ultimate_unit=""):
             ax = dict(
                 labelColor="#5A6A80",
                 titleColor="#00CCFF",
@@ -496,6 +497,40 @@ if check_password():
             )
 
             layers = [line]
+
+            if ultimate_low is not None and ultimate_high is not None:
+                UC = "#00CCFF"  # ultimate light blue
+
+                # Filled band
+                ultimate_band = (
+                    alt.Chart(pd.DataFrame({"y1": [float(ultimate_low)], "y2": [float(ultimate_high)]}))
+                    .mark_rect(color=UC, opacity=0.10)
+                    .encode(y=alt.Y("y1:Q"), y2=alt.Y2("y2:Q"))
+                )
+
+                # Dotted boundary line
+                rule_ultimate = (
+                    alt.Chart(pd.DataFrame({"y": [float(ultimate_low)]}))
+                    .mark_rule(color=UC, strokeDash=[2, 2], strokeWidth=1.5)
+                    .encode(y=alt.Y("y:Q"))
+                )
+
+                # Label
+                ultimate_label_df = pd.DataFrame({
+                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "y": [float(ultimate_low)],
+                    "text": [f"ULTIMATE  {ultimate_low}–{ultimate_high} {ultimate_unit}"],
+                })
+                ultimate_label = (
+                    alt.Chart(ultimate_label_df)
+                    .mark_text(
+                        align="right", baseline="bottom",
+                        color=UC, fontSize=10, fontWeight=700,
+                        font="Consolas", dy=-5,
+                    )
+                    .encode(x=alt.X("x:T"), y=alt.Y("y:Q"), text=alt.Text("text:N"))
+                )
+                layers += [ultimate_band, rule_ultimate, ultimate_label]
 
             if target_low is not None and target_high is not None:
                 TC = "#2ECC71"  # target green
@@ -615,7 +650,8 @@ if check_password():
                                target_low=67, target_high=69, target_unit="kg",
                                inflection_point=70.0, inflection_label="INFLECTION POINT",
                                upper_limit=71.0, upper_limit_label="UPPER LIMIT",
-                               y_ticks=list(range(67, 91, 2))),
+                               ultimate_low=65, ultimate_high=67, ultimate_unit="kg",
+                               y_ticks=list(range(65, 91, 2))),
                     use_container_width=True,
                 )
             else:
