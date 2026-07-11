@@ -636,7 +636,7 @@ if check_password():
                         text=title, color="#00CCFF", fontSize=11,
                         font="Consolas", anchor="start", fontWeight=700,
                     ),
-                    height=460, background="#0A0D14",
+                    height=520, background="#0A0D14",
                 )
                 .configure_view(strokeOpacity=0)
             )
@@ -649,7 +649,6 @@ if check_password():
                     make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
                                target_low=67, target_high=69, target_unit="kg",
                                inflection_point=70.0, inflection_label="INFLECTION POINT",
-                               upper_limit=71.0, upper_limit_label="UPPER LIMIT",
                                ultimate_low=65, ultimate_high=67, ultimate_unit="kg",
                                y_ticks=list(range(65, 91, 2))),
                     use_container_width=True,
