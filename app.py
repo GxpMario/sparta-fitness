@@ -479,6 +479,14 @@ if check_password():
                 labelFont="Consolas",
                 titleFont="Consolas",
             )
+            span_days = (data["Date_Only"].max() - data["Date_Only"].min()).days if len(data) > 1 else 0
+            if span_days <= 14:
+                x_tick_count, x_format = "day", "%b %d"
+            elif span_days <= 120:
+                x_tick_count, x_format = "week", "%b %d"
+            else:
+                x_tick_count, x_format = "month", "%b %Y"
+
             line = (
                 alt.Chart(data)
                 .mark_line(
@@ -487,7 +495,7 @@ if check_password():
                 )
                 .encode(
                     x=alt.X("Date_Only:T", title="DATE",
-                             axis=alt.Axis(format="%b %Y", labelAngle=0, tickCount="month", **ax)),
+                             axis=alt.Axis(format=x_format, labelAngle=0, tickCount=x_tick_count, **ax)),
                     y=alt.Y(f"{col}:Q",
                              scale=alt.Scale(zero=False, domainMin=y_domain_min) if y_domain_min is not None else alt.Scale(zero=False),
                              title=y_title,
