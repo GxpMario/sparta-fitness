@@ -517,14 +517,14 @@ if check_password():
 
                 # Label
                 ultimate_label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "x": [pd.Timestamp(data["Date_Only"].min())],
                     "y": [float(ultimate_low)],
                     "text": [f"ULTIMATE  {ultimate_low}–{ultimate_high} {ultimate_unit}"],
                 })
                 ultimate_label = (
                     alt.Chart(ultimate_label_df)
                     .mark_text(
-                        align="right", baseline="bottom",
+                        align="left", baseline="bottom",
                         color=UC, fontSize=10, fontWeight=700,
                         font="Consolas", dy=-5,
                     )
@@ -556,14 +556,14 @@ if check_password():
 
                 # Label anchored to the max date at the upper boundary
                 label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "x": [pd.Timestamp(data["Date_Only"].min())],
                     "y": [float(target_high)],
                     "text": [f"TARGET  {target_low}–{target_high} {target_unit}"],
                 })
                 label = (
                     alt.Chart(label_df)
                     .mark_text(
-                        align="right", baseline="bottom",
+                        align="left", baseline="bottom",
                         color=TC, fontSize=10, fontWeight=700,
                         font="Consolas", dy=-5,
                     )
@@ -587,14 +587,14 @@ if check_password():
 
                 # Label
                 inf_label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "x": [pd.Timestamp(data["Date_Only"].min())],
                     "y": [float(inflection_point)],
                     "text": [inflection_label],
                 })
                 inf_label = (
                     alt.Chart(inf_label_df)
                     .mark_text(
-                        align="right", baseline="bottom",
+                        align="left", baseline="bottom",
                         color=IC, fontSize=10, fontWeight=700,
                         font="Consolas", dy=-5,
                     )
@@ -614,14 +614,14 @@ if check_password():
 
                 # Label
                 ul_label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].max())],
+                    "x": [pd.Timestamp(data["Date_Only"].min())],
                     "y": [float(upper_limit)],
                     "text": [upper_limit_label],
                 })
                 ul_label = (
                     alt.Chart(ul_label_df)
                     .mark_text(
-                        align="right", baseline="bottom",
+                        align="left", baseline="bottom",
                         color=ULC, fontSize=10, fontWeight=700,
                         font="Consolas", dy=-5,
                     )
@@ -648,7 +648,7 @@ if check_password():
                 st.altair_chart(
                     make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
                                target_low=67, target_high=69, target_unit="kg",
-                               inflection_point=70.0, inflection_label="INFLECTION POINT",
+                               inflection_point=70.0, inflection_label="INFLECTION POINT 70 kg",
                                ultimate_low=65, ultimate_high=67, ultimate_unit="kg",
                                y_ticks=list(range(65, 91, 2))),
                     use_container_width=True,
