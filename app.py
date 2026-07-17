@@ -1,5 +1,6 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
+from gspread.exceptions import WorksheetNotFound
 import pandas as pd
 from datetime import date, timedelta
 import altair as alt
@@ -316,12 +317,15 @@ WORKOUTS_COLUMNS = ["id", "date", "exercise_name", "set_number", "weight_or_band
 
 def load_workouts_df(gs_conn):
     try:
-        w_df = gs_conn.read(worksheet=WORKOUTS_WORKSHEET, ttl=0)
+        w_df = gs_conn.read(worksheet=WORKOUTS_WORKSHEET, ttl=5)
         w_df = w_df.dropna(how="all")
-    except Exception:
+    except WorksheetNotFound:
         w_df = pd.DataFrame(columns=WORKOUTS_COLUMNS)
         gs_conn.create(worksheet=WORKOUTS_WORKSHEET, data=pd.DataFrame([{c: "" for c in WORKOUTS_COLUMNS}]))
         gs_conn.update(worksheet=WORKOUTS_WORKSHEET, data=w_df)
+    except Exception as e:
+        st.error(f"WORKOUTS SHEET LOAD ERROR: {e}")
+        return pd.DataFrame(columns=WORKOUTS_COLUMNS)
 
     for col in WORKOUTS_COLUMNS:
         if col not in w_df.columns:
