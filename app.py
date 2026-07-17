@@ -3,7 +3,6 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import date, timedelta
 import altair as alt
-import sqlite3
 
 st.set_page_config(page_title="Gxpr Stats", layout="wide", page_icon="▣")
 
@@ -311,23 +310,34 @@ def check_password():
 
 
 # ── Main app ─────────────────────────────────────────────────────────────────
-def get_workout_conn():
-    return sqlite3.connect('sparta_fitness.db')
+WORKOUTS_WORKSHEET = "Workouts"
+WORKOUTS_COLUMNS = ["id", "date", "exercise_name", "set_number", "weight_or_bands", "reps", "rpe_or_notes"]
+
+
+def load_workouts_df(gs_conn):
+    try:
+        w_df = gs_conn.read(worksheet=WORKOUTS_WORKSHEET, ttl=0)
+        w_df = w_df.dropna(how="all")
+    except Exception:
+        w_df = pd.DataFrame(columns=WORKOUTS_COLUMNS)
+        gs_conn.create(worksheet=WORKOUTS_WORKSHEET, data=pd.DataFrame([{c: "" for c in WORKOUTS_COLUMNS}]))
+        gs_conn.update(worksheet=WORKOUTS_WORKSHEET, data=w_df)
+
+    for col in WORKOUTS_COLUMNS:
+        if col not in w_df.columns:
+            w_df[col] = None
+
+    w_df["id"] = pd.to_numeric(w_df["id"], errors="coerce")
+    w_df["set_number"] = pd.to_numeric(w_df["set_number"], errors="coerce").fillna(0).astype(int)
+    w_df["reps"] = pd.to_numeric(w_df["reps"], errors="coerce").fillna(0).astype(int)
+    w_df["date"] = w_df["date"].astype(str)
+    w_df["exercise_name"] = w_df["exercise_name"].fillna("").astype(str)
+    w_df["weight_or_bands"] = w_df["weight_or_bands"].fillna("").astype(str)
+    w_df["rpe_or_notes"] = w_df["rpe_or_notes"].fillna("").astype(str)
+    return w_df[WORKOUTS_COLUMNS]
+
 
 if check_password():
-    # Initialize SQLite DB schema
-    with get_workout_conn() as db_conn:
-        db_conn.execute('''
-            CREATE TABLE IF NOT EXISTS workouts (
-                date TEXT,
-                exercise_name TEXT,
-                set_number INTEGER,
-                weight_or_bands TEXT,
-                reps INTEGER,
-                rpe_or_notes TEXT
-            )
-        ''')
-
     # Header bar
     st.markdown("""
         <div style='background:#0E1220;border-bottom:1px solid #FF9900;
@@ -346,6 +356,7 @@ if check_password():
 
     # ── Data load ─────────────────────────────────────────────────────────────
     gs_conn = st.connection("gsheets", type=GSheetsConnection)
+    workouts_df = load_workouts_df(gs_conn)
     try:
         df_raw = gs_conn.read(ttl=0)
         for col in ["Cardio Type", "Comments", "Weight Band"]:
@@ -415,15 +426,15 @@ if check_password():
         elif view_opt == "Last 12 Months":
             chart_df = chart_df[chart_df["Date_Only"] >= (today - timedelta(days=365))]
 
-        # Calculate Pull-up total from SQLite to supplement GSheets history
-        with get_workout_conn() as db_conn:
-            start_iso = chart_df["Date_Only"].min().strftime("%Y-%m-%d") if not chart_df.empty else "1900-01-01"
-            end_iso = chart_df["Date_Only"].max().strftime("%Y-%m-%d") if not chart_df.empty else "9999-12-31"
-            res = db_conn.execute(
-                "SELECT SUM(reps) FROM workouts WHERE exercise_name = 'Assisted Pull-Ups' AND date BETWEEN ? AND ?",
-                (start_iso, end_iso)
-            ).fetchone()
-            sqlite_pullups = res[0] if res and res[0] else 0
+        # Calculate Pull-up total from the Workouts sheet to supplement GSheets daily-metrics history
+        start_iso = chart_df["Date_Only"].min().strftime("%Y-%m-%d") if not chart_df.empty else "1900-01-01"
+        end_iso = chart_df["Date_Only"].max().strftime("%Y-%m-%d") if not chart_df.empty else "9999-12-31"
+        pu_mask = (
+            (workouts_df["exercise_name"] == "Assisted Pull-Ups")
+            & (workouts_df["date"] >= start_iso)
+            & (workouts_df["date"] <= end_iso)
+        )
+        resistance_pullups = int(workouts_df.loc[pu_mask, "reps"].sum())
 
         unit_lbl = "<div style='color:#00CCFF; font-size:0.72rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-top:0.8rem; margin-bottom:0.4rem;'>{}</div>"
 
@@ -438,7 +449,7 @@ if check_password():
         with r_col:
             st.markdown(unit_lbl.format("REPS"), unsafe_allow_html=True)
             gs_pullups = int(chart_df["Pullups"].sum()) if "Pullups" in chart_df.columns else 0
-            st.metric("PULL-UPS", gs_pullups + int(sqlite_pullups))
+            st.metric("PULL-UPS", gs_pullups + resistance_pullups)
         with m_col:
             st.markdown(unit_lbl.format("MINUTES"), unsafe_allow_html=True)
             st.metric("SKIP", int(chart_df[chart_df["Cardio Type"] == "Skip"]["Cardio Min/Reps"].sum()))
@@ -662,7 +673,7 @@ if check_password():
                                inflection_point=70.0, inflection_label="INFLECTION POINT 70 kg",
                                ultimate_low=65, ultimate_high=67, ultimate_unit="kg",
                                y_ticks=list(range(65, 91, 2)), y_domain_min=64),
-                    use_container_width=True,
+                    width="stretch",
                 )
             else:
                 st.info("No weight data in selected period.")
@@ -672,7 +683,7 @@ if check_password():
                 st.altair_chart(
                     make_chart(waist_data, "Waist_cm", "#FFD700", "WAIST (cm)", "WAIST",
                                target_low=83, target_high=86, target_unit="cm"),
-                    use_container_width=True,
+                    width="stretch",
                 )
             else:
                 st.info("No waist data in selected period.")
@@ -681,7 +692,7 @@ if check_password():
             if not f_data.empty:
                 st.altair_chart(
                     make_chart(f_data, "Fat_Pct", "#00CCFF", "BODY FAT %", "BODY FAT"),
-                    use_container_width=True,
+                    width="stretch",
                 )
             else:
                 st.info("No body fat data in selected period.")
@@ -699,35 +710,24 @@ if check_password():
     }
     default_exercises = list(PROGRESSION_TARGETS.keys())
 
-    # Helper function to extract last session's performance from SQLite
+    # Helper function to extract last session's performance from the Workouts sheet
     def get_last_session_performance(exercise, set_num, before_date=None):
-        try:
-            with get_workout_conn() as conn:
-                cursor = conn.cursor()
-                query = """
-                    SELECT weight_or_bands, reps, rpe_or_notes, date 
-                    FROM workouts 
-                    WHERE LOWER(exercise_name) = LOWER(?) AND set_number = ?
-                """
-                params = [exercise, set_num]
-                if before_date:
-                    query += " AND date < ?"
-                    params.append(before_date)
-                query += " ORDER BY date DESC, rowid DESC LIMIT 1"
-                
-                cursor.execute(query, params)
-                row = cursor.fetchone()
-                if row:
-                    notes = row[2] if row[2] and str(row[2]).lower() != "none" else "no notes"
-                    return f"Last: {row[0]} x{row[1]} ({notes})", row[3]
-        except Exception:
-            pass
+        mask = (
+            (workouts_df["exercise_name"].str.lower() == exercise.lower())
+            & (workouts_df["set_number"] == set_num)
+        )
+        if before_date:
+            mask &= workouts_df["date"] < before_date
+        matches = workouts_df[mask].sort_values(["date", "id"], ascending=[False, False])
+        if not matches.empty:
+            row = matches.iloc[0]
+            notes = row["rpe_or_notes"] if row["rpe_or_notes"] and str(row["rpe_or_notes"]).lower() != "none" else "no notes"
+            return f"Last: {row['weight_or_bands']} x{row['reps']} ({notes})", row["date"]
         return "No history", "—"
 
-    # Fetch all unique exercises from DB for the dropdown
-    with get_workout_conn() as db_conn:
-        db_ex_list = pd.read_sql_query("SELECT DISTINCT exercise_name FROM workouts", db_conn)["exercise_name"].tolist()
-    
+    # Fetch all unique exercises from the Workouts sheet for the dropdown
+    db_ex_list = sorted(e for e in workouts_df["exercise_name"].unique().tolist() if e)
+
     all_options = sorted(list(set(default_exercises + db_ex_list)))
 
     with w_tab1:
@@ -847,7 +847,7 @@ if check_password():
                 "Reps": st.column_config.NumberColumn("Reps", min_value=0, step=1),
                 "Notes": st.column_config.TextColumn("RPE / Notes"),
             },
-            use_container_width=True,
+            width="stretch",
             key="workout_data_editor"
         )
 
@@ -869,7 +869,7 @@ if check_password():
             *   **Rows/Raises**: 15+ reps → Increase weight to 10kg.
             """)
 
-        if st.button("SAVE SESSION & SYNC TO CLOUD", use_container_width=True):
+        if st.button("SAVE SESSION & SYNC TO CLOUD", width="stretch"):
             # 1. Logic for GSheets (Daily Metrics)
             if f_kickboxing:
                 cardio_type, cardio_min = "Kickboxing", f_kb_min
@@ -892,18 +892,25 @@ if check_password():
             }])
             gs_conn.update(data=pd.concat([clean_df, new_gs_row], ignore_index=True))
             
-            # 2. Logic for SQLite (Resistance Training)
+            # 2. Logic for GSheets (Resistance Training)
             valid_entries = [row for row in edited_log if row.get("Reps", 0) > 0]
             if valid_entries:
-                with get_workout_conn() as db_conn:
-                    for row in valid_entries:
-                        db_conn.execute(
-                            "INSERT INTO workouts (date, exercise_name, set_number, weight_or_bands, reps, rpe_or_notes) VALUES (?, ?, ?, ?, ?, ?)",
-                            (w_date.strftime("%Y-%m-%d"), row["Exercise"], row["Set"], 
-                             row["Weight/Bands"], row["Reps"], row["Notes"])
-                        )
+                next_id = int(workouts_df["id"].max()) + 1 if workouts_df["id"].notna().any() else 1
+                new_rows = []
+                for row in valid_entries:
+                    new_rows.append({
+                        "id": next_id,
+                        "date": w_date.strftime("%Y-%m-%d"),
+                        "exercise_name": row["Exercise"],
+                        "set_number": row["Set"],
+                        "weight_or_bands": row["Weight/Bands"],
+                        "reps": row["Reps"],
+                        "rpe_or_notes": row["Notes"],
+                    })
+                    next_id += 1
+                updated_workouts_df = pd.concat([workouts_df, pd.DataFrame(new_rows)], ignore_index=True)
+                gs_conn.update(worksheet=WORKOUTS_WORKSHEET, data=updated_workouts_df[WORKOUTS_COLUMNS])
                 st.toast(f"✅ Saved {len(valid_entries)} resistance sets.", icon="💪")
-                db_conn.commit() # Commit the changes to the database
 
             st.success(f"Daily metrics synced to GSheets for {w_date}")
             if "current_workout_log" in st.session_state:
@@ -911,53 +918,46 @@ if check_password():
             st.rerun()
 
     with w_tab2:
-        with get_workout_conn() as db_conn:
-            # Query rowid to enable targeted updates and deletions
-            h_df = pd.read_sql_query("SELECT rowid, * FROM workouts ORDER BY date DESC, exercise_name, set_number", db_conn)
+        h_df = workouts_df.sort_values(
+            ["date", "exercise_name", "set_number"], ascending=[False, True, True]
+        ).reset_index(drop=True)
 
         if not h_df.empty:
             sel_ex = st.selectbox("View Exercise Progress", ["All"] + sorted(db_ex_list))
             view_df = h_df if sel_ex == "All" else h_df[h_df["exercise_name"] == sel_ex]
-            
+
             edited_h_df = st.data_editor(
                 view_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 num_rows="dynamic",
                 column_config={
-                    "rowid": None,  # Keep the internal ID hidden from the UI
+                    "id": None,  # Keep the internal ID hidden from the UI
                     "exercise_name": st.column_config.SelectboxColumn("Exercise", options=all_options),
                 },
                 key="history_editor"
             )
 
-            if st.button("SAVE CHANGES TO HISTORY", use_container_width=True):
-                orig_ids = set(view_df["rowid"].tolist())
-                curr_ids = set(edited_h_df["rowid"].dropna().astype(int).tolist())
+            if st.button("SAVE CHANGES TO HISTORY", width="stretch"):
+                orig_ids = set(view_df["id"].dropna().tolist())
+                curr_ids = set(edited_h_df["id"].dropna().tolist())
                 del_ids = orig_ids - curr_ids
-                
-                with get_workout_conn() as conn:
-                    # 1. Process deletions
-                    for rid in del_ids:
-                        conn.execute("DELETE FROM workouts WHERE rowid = ?", (rid,))
-                    
-                    # 2. Process updates and new row additions
-                    for _, row in edited_h_df.iterrows():
-                        if pd.notna(row.get("rowid")):
-                            conn.execute("""
-                                UPDATE workouts SET 
-                                date=?, exercise_name=?, set_number=?, weight_or_bands=?, reps=?, rpe_or_notes=? 
-                                WHERE rowid=?
-                            """, (row["date"], row["exercise_name"], row["set_number"], 
-                                  row["weight_or_bands"], row["reps"], row["rpe_or_notes"], int(row["rowid"])))
-                        else:
-                            # Support adding entries directly into the history log
-                            if row["exercise_name"] and row["reps"] > 0:
-                                conn.execute("""
-                                    INSERT INTO workouts (date, exercise_name, set_number, weight_or_bands, reps, rpe_or_notes)
-                                    VALUES (?, ?, ?, ?, ?, ?)
-                                """, (row["date"], row["exercise_name"], row["set_number"], 
-                                      row["weight_or_bands"], row["reps"], row["rpe_or_notes"]))
+
+                full_df = workouts_df[~workouts_df["id"].isin(del_ids)].copy()
+
+                next_id = int(full_df["id"].max()) + 1 if full_df["id"].notna().any() else 1
+                for _, row in edited_h_df.iterrows():
+                    if pd.notna(row.get("id")):
+                        edit_cols = ["date", "exercise_name", "set_number", "weight_or_bands", "reps", "rpe_or_notes"]
+                        full_df.loc[full_df["id"] == row["id"], edit_cols] = [row[c] for c in edit_cols]
+                    elif row["exercise_name"] and row["reps"] > 0:
+                        # Support adding entries directly into the history log
+                        new_row = {c: row[c] for c in ["date", "exercise_name", "set_number", "weight_or_bands", "reps", "rpe_or_notes"]}
+                        new_row["id"] = next_id
+                        full_df = pd.concat([full_df, pd.DataFrame([new_row])], ignore_index=True)
+                        next_id += 1
+
+                gs_conn.update(worksheet=WORKOUTS_WORKSHEET, data=full_df[WORKOUTS_COLUMNS])
                 st.success("Progression history updated.")
                 st.rerun()
             
@@ -977,11 +977,11 @@ if check_password():
                     tooltip=[alt.Tooltip("date:T", title="Date", format="%Y-%m-%d"), "reps"]
                 ).properties(height=200, background="#0A0D14").configure_view(strokeOpacity=0)
 
-                st.altair_chart(c, use_container_width=True)
+                st.altair_chart(c, width="stretch")
 
             # ── PERFORMANCE FEEDBACK LOOP ENGINE ──
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("RUN PERFORMANCE REVIEW REPORT", use_container_width=True):
+            if st.button("RUN PERFORMANCE REVIEW REPORT", width="stretch"):
                 st.markdown("""
                     <div style='background:#111625; padding:15px; border-left:3px solid #00CCFF; margin-bottom:15px;'>
                         <span style='color:#00CCFF; font-family:Consolas,monospace; font-size:0.9rem; font-weight:700; letter-spacing:0.1em;'>
@@ -1020,58 +1020,51 @@ if check_password():
                 st.markdown("---")
                 st.markdown("**Strength Progression Trajectory:**")
                 
-                with get_workout_conn() as conn:
-                    pu_max = conn.execute("""
-                        SELECT reps, rpe_or_notes, date FROM workouts 
-                        WHERE exercise_name = 'Assisted Pull-Ups' 
-                        ORDER BY date DESC, reps DESC, set_number DESC LIMIT 1
-                    """).fetchone()
-                    
-                    if pu_max:
-                        pu_notes = str(pu_max[1]).lower()
-                        st.markdown(f"• **Assisted Pull-Ups Peak Volume:** {pu_max[0]} reps logged on {pu_max[2]} (Notes: {pu_max[1]})")
-                        if "easy" in pu_notes or pu_max[0] >= 12:
-                            st.warning("⚠️ **Progression Target Triggered:** You are consistently hitting the upper threshold of the 12-rep protocol. **Action:** Unclip exactly 1 resistance band for your next session to force neural adaptation.")
-                        elif "hard" in pu_notes:
-                            st.markdown("  *Status:* High effort detected. Prioritize full range of motion and chin-over-bar clearance before reducing assistance.")
-                        elif "medium" in pu_notes:
-                            st.markdown("  *Status:* Intensity is optimal. Focus on accumulating volume toward the 12-rep threshold.")
-                        else:
-                            st.markdown("  *Status:* Maintain current 3-band configuration. Focus on pushing the third set from 10 reps to a clean 12 reps before dropping assistance.")
-                            
-                    row_max = conn.execute("""
-                        SELECT reps, rpe_or_notes, date FROM workouts 
-                        WHERE exercise_name = 'Dumbbell Rows' 
-                        ORDER BY date DESC, reps DESC, set_number DESC LIMIT 1
-                    """).fetchone()
-                    
-                    if row_max:
-                        notes_lower = str(row_max[1]).lower()
-                        if "easy" in notes_lower or row_max[0] >= 15:
-                            st.success(f"🔥 **Overload Authorization:** Dumbbell rows are printing below your structural limit (Last: {row_max[0]} reps). **Action:** Increase physical dumbbell weight to 10 kg.")
-                        elif "hard" in notes_lower:
-                            st.markdown("• **Dumbbell Rows:** Intensity is high. Focus on a 1-second static pause at the peak compression point to maximize lat engagement.")
-                        else:
-                            st.markdown("• **Dumbbell Rows:** Retain 7.5 kg load. Focus on a 1-second static pause at the peak compression point to protect the elbow joints.")
-                            
-                    lat_max = conn.execute("""
-                        SELECT reps, rpe_or_notes, date FROM workouts 
-                        WHERE exercise_name = 'Lateral Dumbbell Raises' 
-                        ORDER BY date DESC, reps DESC, set_number DESC LIMIT 1
-                    """).fetchone()
-                    
-                    if lat_max:
-                        lat_notes_lower = str(lat_max[1]).lower()
-                        if "easy" in lat_notes_lower or lat_max[0] >= 15:
-                            st.success(f"🔥 **Overload Authorization:** Lateral Raises are currently under-taxing your capacity (Last: {lat_max[0]} reps). **Action:** Transition to 10 kg or push for 15 reps if structural integrity remains high.")
-                        elif "hard" in lat_notes_lower:
-                            st.markdown(f"• **Lateral Dumbbell Raises:** Ceilings fully engaged at 7.5 kg (Last: {lat_max[2]}). **Do not increase raw weight.** Maintain load and prioritize a strict 3-second lowering phase (eccentric focus) to maximize shoulder capping without risking elbow inflammation.")
-                        elif "medium" in lat_notes_lower:
-                            st.markdown(f"• **Lateral Dumbbell Raises:** Loading is appropriate. Focus on minimizing trap involvement and maintaining strict vertical paths.")
-                        else:
-                            st.markdown(f"• **Lateral Dumbbell Raises:** Last logged on {lat_max[2]}. Maintain current load and focus on a strict 3-second eccentric phase to increase intensity.")
+                def latest_peak(exercise):
+                    sub = workouts_df[workouts_df["exercise_name"] == exercise].sort_values(
+                        ["date", "reps", "set_number"], ascending=[False, False, False]
+                    )
+                    if sub.empty:
+                        return None
+                    top = sub.iloc[0]
+                    return (top["reps"], top["rpe_or_notes"], top["date"])
+
+                pu_max = latest_peak("Assisted Pull-Ups")
+                if pu_max:
+                    pu_notes = str(pu_max[1]).lower()
+                    st.markdown(f"• **Assisted Pull-Ups Peak Volume:** {pu_max[0]} reps logged on {pu_max[2]} (Notes: {pu_max[1]})")
+                    if "easy" in pu_notes or pu_max[0] >= 12:
+                        st.warning("⚠️ **Progression Target Triggered:** You are consistently hitting the upper threshold of the 12-rep protocol. **Action:** Unclip exactly 1 resistance band for your next session to force neural adaptation.")
+                    elif "hard" in pu_notes:
+                        st.markdown("  *Status:* High effort detected. Prioritize full range of motion and chin-over-bar clearance before reducing assistance.")
+                    elif "medium" in pu_notes:
+                        st.markdown("  *Status:* Intensity is optimal. Focus on accumulating volume toward the 12-rep threshold.")
+                    else:
+                        st.markdown("  *Status:* Maintain current 3-band configuration. Focus on pushing the third set from 10 reps to a clean 12 reps before dropping assistance.")
+
+                row_max = latest_peak("Dumbbell Rows")
+                if row_max:
+                    notes_lower = str(row_max[1]).lower()
+                    if "easy" in notes_lower or row_max[0] >= 15:
+                        st.success(f"🔥 **Overload Authorization:** Dumbbell rows are printing below your structural limit (Last: {row_max[0]} reps). **Action:** Increase physical dumbbell weight to 10 kg.")
+                    elif "hard" in notes_lower:
+                        st.markdown("• **Dumbbell Rows:** Intensity is high. Focus on a 1-second static pause at the peak compression point to maximize lat engagement.")
+                    else:
+                        st.markdown("• **Dumbbell Rows:** Retain 7.5 kg load. Focus on a 1-second static pause at the peak compression point to protect the elbow joints.")
+
+                lat_max = latest_peak("Lateral Dumbbell Raises")
+                if lat_max:
+                    lat_notes_lower = str(lat_max[1]).lower()
+                    if "easy" in lat_notes_lower or lat_max[0] >= 15:
+                        st.success(f"🔥 **Overload Authorization:** Lateral Raises are currently under-taxing your capacity (Last: {lat_max[0]} reps). **Action:** Transition to 10 kg or push for 15 reps if structural integrity remains high.")
+                    elif "hard" in lat_notes_lower:
+                        st.markdown(f"• **Lateral Dumbbell Raises:** Ceilings fully engaged at 7.5 kg (Last: {lat_max[2]}). **Do not increase raw weight.** Maintain load and prioritize a strict 3-second lowering phase (eccentric focus) to maximize shoulder capping without risking elbow inflammation.")
+                    elif "medium" in lat_notes_lower:
+                        st.markdown(f"• **Lateral Dumbbell Raises:** Loading is appropriate. Focus on minimizing trap involvement and maintaining strict vertical paths.")
+                    else:
+                        st.markdown(f"• **Lateral Dumbbell Raises:** Last logged on {lat_max[2]}. Maintain current load and focus on a strict 3-second eccentric phase to increase intensity.")
         else:
-            st.info("No history found in sparta_fitness.db")
+            st.info("No history found in the Workouts sheet.")
 
     # ── Data management ───────────────────────────────────────────────────────
     section_header("DATA MANAGEMENT")
@@ -1134,7 +1127,7 @@ if check_password():
             st.dataframe(
                 chart_df[display_cols].sort_values("Date_Only", ascending=False),
                 hide_index=True,
-                use_container_width=True,
+                width="stretch",
             )
         else:
             st.info("No data for selected period.")
