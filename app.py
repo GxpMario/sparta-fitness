@@ -317,7 +317,7 @@ WORKOUTS_COLUMNS = ["id", "date", "exercise_name", "set_number", "weight_or_band
 
 def load_workouts_df(gs_conn):
     try:
-        w_df = gs_conn.read(worksheet=WORKOUTS_WORKSHEET, ttl=5)
+        w_df = gs_conn.read(worksheet=WORKOUTS_WORKSHEET, ttl=30)
         w_df = w_df.dropna(how="all")
     except WorksheetNotFound:
         w_df = pd.DataFrame(columns=WORKOUTS_COLUMNS)
@@ -362,7 +362,7 @@ if check_password():
     gs_conn = st.connection("gsheets", type=GSheetsConnection)
     workouts_df = load_workouts_df(gs_conn)
     try:
-        df_raw = gs_conn.read(ttl=0)
+        df_raw = gs_conn.read(ttl=30)
         for col in ["Cardio Type", "Comments", "Weight Band"]:
             if col in df_raw.columns:
                 df_raw[col] = df_raw[col].fillna("N/A").astype(str)
@@ -919,6 +919,7 @@ if check_password():
             st.success(f"Daily metrics synced to GSheets for {w_date}")
             if "current_workout_log" in st.session_state:
                 del st.session_state.current_workout_log
+            st.cache_data.clear()
             st.rerun()
 
     with w_tab2:
@@ -963,6 +964,7 @@ if check_password():
 
                 gs_conn.update(worksheet=WORKOUTS_WORKSHEET, data=full_df[WORKOUTS_COLUMNS])
                 st.success("Progression history updated.")
+                st.cache_data.clear()
                 st.rerun()
             
             if sel_ex != "All":
@@ -1113,6 +1115,7 @@ if check_password():
                         )
                         gs_conn.update(data=updated)
                         st.success("Entry deleted.")
+                        st.cache_data.clear()
                         st.rerun()
             else:
                 st.info("No entries available.")
