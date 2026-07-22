@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 from gspread.exceptions import WorksheetNotFound
 import pandas as pd
 from datetime import date, timedelta
-import altair as alt
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Gxpr Stats", layout="wide", page_icon="▣")
 
@@ -483,195 +483,114 @@ if check_password():
                        upper_limit=None, upper_limit_label="", y_ticks=None,
                        ultimate_low=None, ultimate_high=None, ultimate_unit="",
                        y_domain_min=None):
-            ax = dict(
-                labelColor="#5A6A80",
-                titleColor="#00CCFF",
-                gridColor="#0E1220",
-                domainColor="#3C4555",
-                tickColor="#3C4555",
-                labelFontSize=11,
-                titleFontSize=11,
-                labelFont="Consolas",
-                titleFont="Consolas",
-            )
+            data = data.sort_values("Date_Only")
             span_days = (data["Date_Only"].max() - data["Date_Only"].min()).days if len(data) > 1 else 0
             if span_days <= 14:
-                x_tick_count, x_format = "day", "%b %d"
+                x_dtick, x_format = 24 * 3600 * 1000, "%b %d"
             elif span_days <= 120:
-                x_tick_count, x_format = "week", "%b %d"
+                x_dtick, x_format = 7 * 24 * 3600 * 1000, "%b %d"
             else:
-                x_tick_count, x_format = "month", "%b %Y"
+                x_dtick, x_format = "M1", "%b %Y"
 
-            line = (
-                alt.Chart(data)
-                .mark_line(
-                    point=alt.OverlayMarkDef(color=color, size=40, filled=True),
-                    color=color, strokeWidth=2,
-                )
-                .encode(
-                    x=alt.X("Date_Only:T", title="DATE",
-                             axis=alt.Axis(format=x_format, labelAngle=0, tickCount=x_tick_count, **ax)),
-                    y=alt.Y(f"{col}:Q",
-                             scale=alt.Scale(zero=False, domainMin=y_domain_min) if y_domain_min is not None else alt.Scale(zero=False),
-                             title=y_title,
-                             axis=alt.Axis(**ax, values=y_ticks) if y_ticks else alt.Axis(**ax)),
-                    tooltip=[
-                        alt.Tooltip("Date_Only:T", title="Date", format="%Y-%m-%d"),
-                        alt.Tooltip(f"{col}:Q", title=y_title),
-                    ],
-                )
-            )
+            min_date = data["Date_Only"].min()
 
-            layers = [line]
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=data["Date_Only"], y=data[col],
+                mode="lines+markers",
+                line=dict(color=color, width=2),
+                marker=dict(color=color, size=8),
+                name=y_title,
+                hovertemplate=f"<b>%{{x|%Y-%m-%d}}</b><br>{y_title}: %{{y}}<extra></extra>",
+            ))
+
+            shapes = []
+            annotations = []
+            all_vals = list(data[col].dropna().astype(float))
+
+            def add_band(y1, y2, hue):
+                shapes.append(dict(
+                    type="rect", xref="paper", x0=0, x1=1, y0=y1, y1=y2,
+                    fillcolor=hue, opacity=0.10, line=dict(width=0), layer="below",
+                ))
+
+            def add_rule(y, hue, dash, width, opacity=1.0):
+                shapes.append(dict(
+                    type="line", xref="paper", x0=0, x1=1, y0=y, y1=y,
+                    line=dict(color=hue, width=width, dash=dash), opacity=opacity,
+                ))
+
+            def add_label(y, text, hue):
+                annotations.append(dict(
+                    x=min_date, y=y, xref="x", yref="y",
+                    text=f"<b>{text}</b>", showarrow=False,
+                    font=dict(color=hue, size=10, family="Consolas"),
+                    xanchor="left", yanchor="bottom", yshift=5,
+                ))
 
             if ultimate_low is not None and ultimate_high is not None:
                 UC = "#00CCFF"  # ultimate light blue
-
-                # Filled band
-                ultimate_band = (
-                    alt.Chart(pd.DataFrame({"y1": [float(ultimate_low)], "y2": [float(ultimate_high)]}))
-                    .mark_rect(color=UC, opacity=0.10)
-                    .encode(y=alt.Y("y1:Q"), y2=alt.Y2("y2:Q"))
-                )
-
-                # Dotted boundary line
-                rule_ultimate = (
-                    alt.Chart(pd.DataFrame({"y": [float(ultimate_low)]}))
-                    .mark_rule(color=UC, strokeDash=[2, 2], strokeWidth=1.5)
-                    .encode(y=alt.Y("y:Q"))
-                )
-
-                # Label
-                ultimate_label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].min())],
-                    "y": [float(ultimate_low)],
-                    "text": [f"ULTIMATE  {ultimate_low}–{ultimate_high} {ultimate_unit}"],
-                })
-                ultimate_label = (
-                    alt.Chart(ultimate_label_df)
-                    .mark_text(
-                        align="left", baseline="bottom",
-                        color=UC, fontSize=10, fontWeight=700,
-                        font="Consolas", dy=-5,
-                    )
-                    .encode(x=alt.X("x:T"), y=alt.Y("y:Q"), text=alt.Text("text:N"))
-                )
-                layers += [ultimate_band, rule_ultimate, ultimate_label]
+                add_band(float(ultimate_low), float(ultimate_high), UC)
+                add_rule(float(ultimate_low), UC, "dot", 1.5)
+                add_label(float(ultimate_low), f"ULTIMATE  {ultimate_low}–{ultimate_high} {ultimate_unit}", UC)
+                all_vals += [float(ultimate_low), float(ultimate_high)]
 
             if target_low is not None and target_high is not None:
                 TC = "#2ECC71"  # target green
-
-                # Filled band
-                band = (
-                    alt.Chart(pd.DataFrame({"y1": [float(target_low)], "y2": [float(target_high)]}))
-                    .mark_rect(color=TC, opacity=0.10)
-                    .encode(y=alt.Y("y1:Q"), y2=alt.Y2("y2:Q"))
-                )
-
-                # Dashed boundary lines
-                rule_lo = (
-                    alt.Chart(pd.DataFrame({"y": [float(target_low)]}))
-                    .mark_rule(color=TC, strokeDash=[5, 3], strokeWidth=1, opacity=0.55)
-                    .encode(y=alt.Y("y:Q"))
-                )
-                rule_hi = (
-                    alt.Chart(pd.DataFrame({"y": [float(target_high)]}))
-                    .mark_rule(color=TC, strokeDash=[5, 3], strokeWidth=1, opacity=0.55)
-                    .encode(y=alt.Y("y:Q"))
-                )
-
-                # Label anchored to the max date at the upper boundary
-                label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].min())],
-                    "y": [float(target_high)],
-                    "text": [f"TARGET  {target_low}–{target_high} {target_unit}"],
-                })
-                label = (
-                    alt.Chart(label_df)
-                    .mark_text(
-                        align="left", baseline="bottom",
-                        color=TC, fontSize=10, fontWeight=700,
-                        font="Consolas", dy=-5,
-                    )
-                    .encode(
-                        x=alt.X("x:T"),
-                        y=alt.Y("y:Q"),
-                        text=alt.Text("text:N"),
-                    )
-                )
-                layers += [band, rule_lo, rule_hi, label]
+                add_band(float(target_low), float(target_high), TC)
+                add_rule(float(target_low), TC, "dash", 1, opacity=0.55)
+                add_rule(float(target_high), TC, "dash", 1, opacity=0.55)
+                add_label(float(target_high), f"TARGET  {target_low}–{target_high} {target_unit}", TC)
+                all_vals += [float(target_low), float(target_high)]
 
             if inflection_point is not None:
                 IC = "#FF9900"  # Orange
-
-                # Dotted line
-                rule_inf = (
-                    alt.Chart(pd.DataFrame({"y": [float(inflection_point)]}))
-                    .mark_rule(color=IC, strokeDash=[2, 2], strokeWidth=1.5)
-                    .encode(y=alt.Y("y:Q"))
-                )
-
-                # Label
-                inf_label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].min())],
-                    "y": [float(inflection_point)],
-                    "text": [inflection_label],
-                })
-                inf_label = (
-                    alt.Chart(inf_label_df)
-                    .mark_text(
-                        align="left", baseline="bottom",
-                        color=IC, fontSize=10, fontWeight=700,
-                        font="Consolas", dy=-5,
-                    )
-                    .encode(x=alt.X("x:T"), y=alt.Y("y:Q"), text=alt.Text("text:N"))
-                )
-                layers += [rule_inf, inf_label]
+                add_rule(float(inflection_point), IC, "dot", 1.5)
+                add_label(float(inflection_point), inflection_label, IC)
+                all_vals += [float(inflection_point)]
 
             if upper_limit is not None:
                 ULC = "#8B0000"  # Dark Red
+                add_rule(float(upper_limit), ULC, "dot", 1.5)
+                add_label(float(upper_limit), upper_limit_label, ULC)
+                all_vals += [float(upper_limit)]
 
-                # Dotted line
-                rule_ul = (
-                    alt.Chart(pd.DataFrame({"y": [float(upper_limit)]}))
-                    .mark_rule(color=ULC, strokeDash=[2, 2], strokeWidth=1.5)
-                    .encode(y=alt.Y("y:Q"))
-                )
+            y_lo = y_domain_min if y_domain_min is not None else (min(all_vals) - (max(all_vals) - min(all_vals)) * 0.1 if all_vals else None)
+            y_hi = max(all_vals) + (max(all_vals) - (y_lo or min(all_vals))) * 0.12 if all_vals else None
+            yaxis_range = [y_lo, y_hi] if y_lo is not None and y_hi is not None else None
 
-                # Label
-                ul_label_df = pd.DataFrame({
-                    "x": [pd.Timestamp(data["Date_Only"].min())],
-                    "y": [float(upper_limit)],
-                    "text": [upper_limit_label],
-                })
-                ul_label = (
-                    alt.Chart(ul_label_df)
-                    .mark_text(
-                        align="left", baseline="bottom",
-                        color=ULC, fontSize=10, fontWeight=700,
-                        font="Consolas", dy=-5,
-                    )
-                    .encode(x=alt.X("x:T"), y=alt.Y("y:Q"), text=alt.Text("text:N"))
-                )
-                layers += [rule_ul, ul_label]
-
-            return (
-                alt.layer(*layers)
-                .properties(
-                    title=alt.TitleParams(
-                        text=title, color="#00CCFF", fontSize=11,
-                        font="Consolas", anchor="start", fontWeight=700,
-                    ),
-                    height=520, background="#0A0D14",
-                )
-                .configure_view(strokeOpacity=0)
+            ax_common = dict(
+                gridcolor="#0E1220", linecolor="#3C4555", tickcolor="#3C4555",
+                tickfont=dict(color="#5A6A80", size=11, family="Consolas"),
+                title_font=dict(color="#00CCFF", size=11, family="Consolas"),
+                showline=True, zeroline=False,
             )
+
+            fig.update_layout(
+                title=dict(text=title, font=dict(color="#00CCFF", size=11, family="Consolas"), x=0, xanchor="left"),
+                height=520,
+                paper_bgcolor="#0A0D14",
+                plot_bgcolor="#0A0D14",
+                font=dict(family="Consolas", color="#5A6A80"),
+                showlegend=False,
+                margin=dict(l=60, r=30, t=50, b=50),
+                shapes=shapes,
+                annotations=annotations,
+                xaxis=dict(title="DATE", tickformat=x_format, dtick=x_dtick, tickangle=0, **ax_common),
+                yaxis=dict(
+                    title=y_title, range=yaxis_range,
+                    tickvals=y_ticks if y_ticks else None,
+                    **ax_common,
+                ),
+                hovermode="closest",
+            )
+            return fig
 
         tab1, tab2, tab3 = st.tabs(["WEIGHT", "WAIST", "BODY FAT %"])
         with tab1:
             w_data = chart_df[chart_df["Weight"] > 0]
             if not w_data.empty:
-                st.altair_chart(
+                st.plotly_chart(
                     make_chart(w_data, "Weight", "#FF9900", "WEIGHT (kg)", "WEIGHT",
                                target_low=67, target_high=69, target_unit="kg",
                                inflection_point=70.0, inflection_label="INFLECTION POINT 70 kg",
@@ -684,7 +603,7 @@ if check_password():
         with tab2:
             waist_data = chart_df[chart_df["Waist_cm"] > 0]
             if not waist_data.empty:
-                st.altair_chart(
+                st.plotly_chart(
                     make_chart(waist_data, "Waist_cm", "#FFD700", "WAIST (cm)", "WAIST",
                                target_low=83, target_high=86, target_unit="cm"),
                     width="stretch",
@@ -694,7 +613,7 @@ if check_password():
         with tab3:
             f_data = chart_df[chart_df["Fat_Pct"] > 0]
             if not f_data.empty:
-                st.altair_chart(
+                st.plotly_chart(
                     make_chart(f_data, "Fat_Pct", "#00CCFF", "BODY FAT %", "BODY FAT"),
                     width="stretch",
                 )
@@ -970,20 +889,34 @@ if check_password():
             if sel_ex != "All":
                 chart_data = view_df.groupby("date")["reps"].sum().reset_index()
                 chart_data["date"] = pd.to_datetime(chart_data["date"])
+                chart_data = chart_data.sort_values("date")
                 
                 ax_cfg = dict(
-                    labelColor="#5A6A80", titleColor="#00CCFF", gridColor="#0E1220",
-                    domainColor="#3C4555", tickColor="#3C4555",
-                    labelFontSize=10, titleFontSize=10, labelFont="Consolas", titleFont="Consolas"
+                    gridcolor="#0E1220", linecolor="#3C4555", tickcolor="#3C4555",
+                    tickfont=dict(color="#5A6A80", size=10, family="Consolas"),
+                    title_font=dict(color="#00CCFF", size=10, family="Consolas"),
+                    showline=True, zeroline=False,
                 )
 
-                c = alt.Chart(chart_data).mark_line(point=True, color="#FF9900").encode(
-                    x=alt.X("date:T", title="DATE", axis=alt.Axis(format="%b %d", labelAngle=-30, **ax_cfg)),
-                    y=alt.Y("reps:Q", title="TOTAL REPS", axis=alt.Axis(**ax_cfg)),
-                    tooltip=[alt.Tooltip("date:T", title="Date", format="%Y-%m-%d"), "reps"]
-                ).properties(height=200, background="#0A0D14").configure_view(strokeOpacity=0)
+                c = go.Figure()
+                c.add_trace(go.Scatter(
+                    x=chart_data["date"], y=chart_data["reps"],
+                    mode="lines+markers",
+                    line=dict(color="#FF9900", width=2),
+                    marker=dict(color="#FF9900", size=7),
+                    hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Reps: %{y}<extra></extra>",
+                ))
+                c.update_layout(
+                    height=200,
+                    paper_bgcolor="#0A0D14", plot_bgcolor="#0A0D14",
+                    font=dict(family="Consolas", color="#5A6A80"),
+                    showlegend=False,
+                    margin=dict(l=50, r=20, t=20, b=50),
+                    xaxis=dict(title="DATE", tickformat="%b %d", tickangle=-30, **ax_cfg),
+                    yaxis=dict(title="TOTAL REPS", **ax_cfg),
+                )
 
-                st.altair_chart(c, width="stretch")
+                st.plotly_chart(c, width="stretch")
 
             # ── PERFORMANCE FEEDBACK LOOP ENGINE ──
             st.markdown("<br>", unsafe_allow_html=True)
